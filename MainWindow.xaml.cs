@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private ElementIdentity? _selectedIdentity;
     private HighlightWindow? _highlightWindow;
     private AutomationElement? _hoveredElement;
+    private GuidanceWindow? _guidanceWindow;
 
     public MainWindow()
     {
@@ -31,7 +32,7 @@ public partial class MainWindow : Window
         _highlightTrackingTimer.Tick += HighlightTrackingTimer_Tick;
 
         SourceInitialized += (_, _) => _windowHandle = new WindowInteropHelper(this).Handle;
-        Closed += (_, _) => CloseHighlight();
+        Closed += (_, _) => CloseTrainingOverlay();
     }
 
     private void SelectElementButton_Click(object sender, RoutedEventArgs e)
@@ -42,7 +43,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        CloseHighlight();
+        CloseTrainingOverlay();
         _hoveredElement = null;
         _isSelecting = true;
         _mouseWasDown = IsLeftMouseButtonDown();
@@ -82,7 +83,7 @@ public partial class MainWindow : Window
 
             if (element is null)
             {
-                CloseHighlight();
+                CloseTrainingOverlay();
                 StatusText.Text = "Element is no longer available.";
                 return;
             }
@@ -90,7 +91,7 @@ public partial class MainWindow : Window
             var bounds = element.Current.BoundingRectangle;
             if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
             {
-                CloseHighlight();
+                CloseTrainingOverlay();
                 StatusText.Text = "Element is not currently visible.";
                 return;
             }
@@ -99,6 +100,8 @@ public partial class MainWindow : Window
 
             _highlightWindow ??= new HighlightWindow();
             _highlightWindow.ShowAt(bounds);
+            _guidanceWindow ??= new GuidanceWindow();
+            _guidanceWindow.ShowNear(bounds);
 
             if (!_highlightTrackingTimer.IsEnabled)
             {
@@ -112,12 +115,12 @@ public partial class MainWindow : Window
         }
         catch (ElementNotAvailableException)
         {
-            CloseHighlight();
+            CloseTrainingOverlay();
             StatusText.Text = "Element is no longer available.";
         }
         catch (Exception ex)
         {
-            CloseHighlight();
+            CloseTrainingOverlay();
             StatusText.Text = $"Highlight failed: {ex.Message}";
         }
     }
@@ -299,6 +302,17 @@ public partial class MainWindow : Window
         ControlTypeValue.Text = DisplayValue(element.Current.ControlType?.ProgrammaticName);
         ProcessValue.Text = DisplayValue(GetProcessName(processId));
         ProcessIdValue.Text = processId > 0 ? processId.ToString() : "—";
+    }
+
+    private void CloseTrainingOverlay()
+    {
+        CloseHighlight();
+
+        if (_guidanceWindow is not null)
+        {
+            _guidanceWindow.Close();
+            _guidanceWindow = null;
+        }
     }
 
     private void CloseHighlight()
