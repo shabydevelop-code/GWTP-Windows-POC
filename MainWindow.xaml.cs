@@ -12,7 +12,6 @@ namespace GWTP_Windows_POC;
 public partial class MainWindow : Window
 {
     private readonly DispatcherTimer _selectionTimer;
-    private readonly DispatcherTimer _highlightTrackingTimer;
     private bool _isSelecting;
     private bool _mouseWasDown;
     private IntPtr _windowHandle;
@@ -20,6 +19,7 @@ public partial class MainWindow : Window
     private HighlightWindow? _highlightWindow;
     private AutomationElement? _hoveredElement;
     private GuidanceWindow? _guidanceWindow;
+    private ElementTrackingService? _elementTracker;
 
     public MainWindow()
     {
@@ -27,9 +27,6 @@ public partial class MainWindow : Window
 
         _selectionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
         _selectionTimer.Tick += SelectionTimer_Tick;
-
-        _highlightTrackingTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        _highlightTrackingTimer.Tick += HighlightTrackingTimer_Tick;
 
         SourceInitialized += (_, _) => _windowHandle = new WindowInteropHelper(this).Handle;
         Closed += (_, _) => CloseTrainingOverlay();
@@ -64,16 +61,11 @@ public partial class MainWindow : Window
         UpdateTrackedHighlight(showFoundStatus: true);
     }
 
-    private void HighlightTrackingTimer_Tick(object? sender, EventArgs e)
-    {
-        UpdateTrackedHighlight(showFoundStatus: false);
-    }
-
     private void UpdateTrackedHighlight(bool showFoundStatus)
     {
         if (_selectedIdentity is null)
         {
-            CloseHighlight();
+            CloseTrainingOverlay();
             return;
         }
 
@@ -88,25 +80,8 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var bounds = element.Current.BoundingRectangle;
-            if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
-            {
-                CloseTrainingOverlay();
-                StatusText.Text = "Element is not currently visible.";
-                return;
-            }
-
             ShowElement(element);
-
-            _highlightWindow ??= new HighlightWindow();
-            _highlightWindow.ShowAt(bounds);
-            _guidanceWindow ??= new GuidanceWindow();
-            _guidanceWindow.ShowNear(bounds);
-
-            if (!_highlightTrackingTimer.IsEnabled)
-            {
-                _highlightTrackingTimer.Start();
-            }
+            StartElementTracking(element);
 
             if (showFoundStatus)
             {
@@ -123,6 +98,47 @@ public partial class MainWindow : Window
             CloseTrainingOverlay();
             StatusText.Text = $"Highlight failed: {ex.Message}";
         }
+    }
+
+    private void StartElementTracking(AutomationElement element)
+    {
+        StopElementTracking();
+
+        _highlightWindow ??= new HighlightWindow();
+        _guidanceWindow ??= new GuidanceWindow();
+
+        _elementTracker = new ElementTrackingService(element, Dispatcher);
+        _elementTracker.BoundsChanged += OnTrackedElementBoundsChanged;
+        _elementTracker.ElementUnavailable += OnTrackedElementUnavailable;
+        _elementTracker.Start();
+    }
+
+    private void OnTrackedElementBoundsChanged(Rect bounds)
+    {
+        _highlightWindow ??= new HighlightWindow();
+        _highlightWindow.ShowAt(bounds);
+
+        _guidanceWindow ??= new GuidanceWindow();
+        _guidanceWindow.ShowNear(bounds);
+    }
+
+    private void OnTrackedElementUnavailable()
+    {
+        CloseTrainingOverlay();
+        StatusText.Text = "Element is no longer available.";
+    }
+
+    private void StopElementTracking()
+    {
+        if (_elementTracker is null)
+        {
+            return;
+        }
+
+        _elementTracker.BoundsChanged -= OnTrackedElementBoundsChanged;
+        _elementTracker.ElementUnavailable -= OnTrackedElementUnavailable;
+        _elementTracker.Dispose();
+        _elementTracker = null;
     }
 
     private void SelectionTimer_Tick(object? sender, EventArgs e)
@@ -306,6 +322,7 @@ public partial class MainWindow : Window
 
     private void CloseTrainingOverlay()
     {
+        StopElementTracking();
         CloseHighlight();
 
         if (_guidanceWindow is not null)
@@ -317,8 +334,6 @@ public partial class MainWindow : Window
 
     private void CloseHighlight()
     {
-        _highlightTrackingTimer.Stop();
-
         if (_highlightWindow is not null)
         {
             _highlightWindow.Close();
