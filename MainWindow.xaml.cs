@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private bool _mouseWasDown;
     private IntPtr _windowHandle;
     private ElementIdentity? _selectedIdentity;
+    private HighlightWindow? _highlightWindow;
 
     public MainWindow()
     {
@@ -68,7 +69,8 @@ public partial class MainWindow : Window
             }
 
             ShowElement(element);
-            StatusText.Text = "Element found again.";
+            HighlightElement(element);
+            StatusText.Text = "Element found and highlighted.";
         }
         catch (Exception ex)
         {
@@ -200,6 +202,27 @@ public partial class MainWindow : Window
         ControlTypeValue.Text = DisplayValue(element.Current.ControlType?.ProgrammaticName);
         ProcessValue.Text = DisplayValue(processName);
         ProcessIdValue.Text = processId > 0 ? processId.ToString() : "—";
+    }
+
+    private void HighlightElement(AutomationElement element)
+    {
+        var bounds = element.Current.BoundingRectangle;
+
+        if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            StatusText.Text = "Element found, but it has no visible bounds.";
+            return;
+        }
+
+        _highlightWindow?.Close();
+        _highlightWindow = new HighlightWindow
+        {
+            Left = bounds.Left - 4,
+            Top = bounds.Top - 4,
+            Width = bounds.Width + 8,
+            Height = bounds.Height + 8
+        };
+        _highlightWindow.Show();
     }
 
     private bool IsOurWindow(IntPtr windowHandle)
