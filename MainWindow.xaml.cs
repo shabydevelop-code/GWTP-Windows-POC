@@ -15,6 +15,7 @@ public partial class MainWindow : Window
     private bool _isSelecting;
     private bool _mouseWasDown;
     private IntPtr _windowHandle;
+    private ElementIdentity? _selectedIdentity;
 
     public MainWindow()
     {
@@ -43,8 +44,36 @@ public partial class MainWindow : Window
         _isSelecting = true;
         _mouseWasDown = IsLeftMouseButtonDown();
         SelectElementButton.Content = "Cancel";
+        FindElementButton.IsEnabled = false;
         StatusText.Text = "Move to another application and left-click the control to select it.";
         _selectionTimer.Start();
+    }
+
+    private void FindElementButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedIdentity is null)
+        {
+            StatusText.Text = "Select an element first.";
+            return;
+        }
+
+        try
+        {
+            var element = FindElement(_selectedIdentity);
+
+            if (element is null)
+            {
+                StatusText.Text = "Element not found.";
+                return;
+            }
+
+            ShowElement(element);
+            StatusText.Text = "Element found again.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Find failed: {ex.Message}";
+        }
     }
 
     private void SelectionTimer_Tick(object? sender, EventArgs e)
@@ -83,15 +112,8 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var processId = element.Current.ProcessId;
-            var processName = GetProcessName(processId);
-
-            NameValue.Text = DisplayValue(element.Current.Name);
-            AutomationIdValue.Text = DisplayValue(element.Current.AutomationId);
-            ControlTypeValue.Text = DisplayValue(element.Current.ControlType?.ProgrammaticName);
-            ProcessValue.Text = DisplayValue(processName);
-            ProcessIdValue.Text = processId > 0 ? processId.ToString() : "—";
-
+            _selectedIdentity = CreateIdentity(element);
+            ShowElement(element);
             StopSelection("Element selected.");
         }
         catch (ElementNotAvailableException)
@@ -102,6 +124,82 @@ public partial class MainWindow : Window
         {
             StopSelection($"Selection failed: {ex.Message}");
         }
+    }
+
+    private static ElementIdentity CreateIdentity(AutomationElement element)
+    {
+        var processId = element.Current.ProcessId;
+
+        return new ElementIdentity(
+            element.Current.Name ?? string.Empty,
+            element.Current.AutomationId ?? string.Empty,
+            element.Current.ControlType,
+            GetProcessName(processId));
+    }
+
+    private static AutomationElement? FindElement(ElementIdentity identity)
+    {
+        var root = AutomationElement.RootElement;
+        var processIds = Process.GetProcessesByName(identity.ProcessName)
+            .Select(process => process.Id)
+            .ToHashSet();
+
+        if (processIds.Count == 0)
+        {
+            return null;
+        }
+
+        var conditions = new List<Condition>
+        {
+            new PropertyCondition(AutomationElement.ControlTypeProperty, identity.ControlType)
+        };
+
+        if (!string.IsNullOrWhiteSpace(identity.AutomationId))
+        {
+            conditions.Add(new PropertyCondition(
+                AutomationElement.AutomationIdProperty,
+                identity.AutomationId));
+        }
+
+        if (!string.IsNullOrWhiteSpace(identity.Name))
+        {
+            conditions.Add(new PropertyCondition(
+                AutomationElement.NameProperty,
+                identity.Name));
+        }
+
+        var candidates = root.FindAll(
+            TreeScope.Descendants,
+            new AndCondition(conditions.ToArray()));
+
+        foreach (AutomationElement candidate in candidates)
+        {
+            try
+            {
+                if (processIds.Contains(candidate.Current.ProcessId))
+                {
+                    return candidate;
+                }
+            }
+            catch (ElementNotAvailableException)
+            {
+                // Candidate disappeared while the UI Automation tree was being enumerated.
+            }
+        }
+
+        return null;
+    }
+
+    private void ShowElement(AutomationElement element)
+    {
+        var processId = element.Current.ProcessId;
+        var processName = GetProcessName(processId);
+
+        NameValue.Text = DisplayValue(element.Current.Name);
+        AutomationIdValue.Text = DisplayValue(element.Current.AutomationId);
+        ControlTypeValue.Text = DisplayValue(element.Current.ControlType?.ProgrammaticName);
+        ProcessValue.Text = DisplayValue(processName);
+        ProcessIdValue.Text = processId > 0 ? processId.ToString() : "—";
     }
 
     private bool IsOurWindow(IntPtr windowHandle)
@@ -120,6 +218,7 @@ public partial class MainWindow : Window
         _isSelecting = false;
         _mouseWasDown = false;
         SelectElementButton.Content = "Select Element";
+        FindElementButton.IsEnabled = _selectedIdentity is not null;
         StatusText.Text = status;
     }
 
@@ -161,4 +260,10 @@ public partial class MainWindow : Window
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool IsChild(IntPtr parentWindow, IntPtr childWindow);
+
+    private sealed record ElementIdentity(
+        string Name,
+        string AutomationId,
+        ControlType ControlType,
+        string ProcessName);
 }
