@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     private IntPtr _windowHandle;
     private ElementIdentity? _selectedIdentity;
     private HighlightWindow? _highlightWindow;
+    private AutomationElement? _hoveredElement;
 
     public MainWindow()
     {
@@ -42,6 +43,7 @@ public partial class MainWindow : Window
         }
 
         CloseHighlight();
+        _hoveredElement = null;
         _isSelecting = true;
         _mouseWasDown = IsLeftMouseButtonDown();
         SelectElementButton.Content = "Cancel";
@@ -125,19 +127,86 @@ public partial class MainWindow : Window
         if (!_isSelecting) return;
 
         var isMouseDown = IsLeftMouseButtonDown();
+        var cursorPosition = Forms.Cursor.Position;
+        var windowAtPoint = WindowFromPoint(cursorPosition);
 
-        if (isMouseDown && !_mouseWasDown)
+        if (windowAtPoint != IntPtr.Zero && !IsOurWindow(windowAtPoint))
         {
-            var cursorPosition = Forms.Cursor.Position;
-            var windowAtPoint = WindowFromPoint(cursorPosition);
+            UpdateHoverHighlight(cursorPosition);
 
-            if (windowAtPoint != IntPtr.Zero && !IsOurWindow(windowAtPoint))
+            if (isMouseDown && !_mouseWasDown)
             {
                 CaptureElement(cursorPosition);
             }
         }
+        else
+        {
+            ClearHoverHighlight();
+        }
 
         _mouseWasDown = isMouseDown;
+    }
+
+    private void UpdateHoverHighlight(DrawingPoint cursorPosition)
+    {
+        try
+        {
+            var element = AutomationElement.FromPoint(
+                new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
+
+            if (element is null)
+            {
+                ClearHoverHighlight();
+                return;
+            }
+
+            if (_hoveredElement is not null && AreSameElement(_hoveredElement, element))
+            {
+                return;
+            }
+
+            var bounds = element.Current.BoundingRectangle;
+            if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                ClearHoverHighlight();
+                return;
+            }
+
+            _hoveredElement = element;
+            _highlightWindow ??= new HighlightWindow();
+            _highlightWindow.ShowAt(bounds);
+        }
+        catch (ElementNotAvailableException)
+        {
+            ClearHoverHighlight();
+        }
+        catch
+        {
+            ClearHoverHighlight();
+        }
+    }
+
+    private void ClearHoverHighlight()
+    {
+        _hoveredElement = null;
+
+        if (_isSelecting && _highlightWindow is not null)
+        {
+            _highlightWindow.Close();
+            _highlightWindow = null;
+        }
+    }
+
+    private static bool AreSameElement(AutomationElement first, AutomationElement second)
+    {
+        try
+        {
+            return first.Equals(second);
+        }
+        catch (ElementNotAvailableException)
+        {
+            return false;
+        }
     }
 
     private void CaptureElement(DrawingPoint cursorPosition)
@@ -154,6 +223,7 @@ public partial class MainWindow : Window
             }
 
             _selectedIdentity = CreateIdentity(element);
+            _hoveredElement = null;
             ShowElement(element);
             StopSelection("Element selected.");
         }
@@ -253,6 +323,12 @@ public partial class MainWindow : Window
         _selectionTimer.Stop();
         _isSelecting = false;
         _mouseWasDown = false;
+        _hoveredElement = null;
+        if (_highlightWindow is not null)
+        {
+            _highlightWindow.Close();
+            _highlightWindow = null;
+        }
         SelectElementButton.Content = "Select Element";
         FindElementButton.IsEnabled = _selectedIdentity is not null;
         StatusText.Text = status;
