@@ -12,6 +12,7 @@ namespace GWTP_Windows_POC;
 public partial class MainWindow : Window
 {
     private readonly DispatcherTimer _selectionTimer;
+    private readonly DispatcherTimer _highlightTrackingTimer;
     private bool _isSelecting;
     private bool _mouseWasDown;
     private IntPtr _windowHandle;
@@ -22,16 +23,14 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        _selectionTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(40)
-        };
+        _selectionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
         _selectionTimer.Tick += SelectionTimer_Tick;
 
-        SourceInitialized += (_, _) =>
-        {
-            _windowHandle = new WindowInteropHelper(this).Handle;
-        };
+        _highlightTrackingTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        _highlightTrackingTimer.Tick += HighlightTrackingTimer_Tick;
+
+        SourceInitialized += (_, _) => _windowHandle = new WindowInteropHelper(this).Handle;
+        Closed += (_, _) => CloseHighlight();
     }
 
     private void SelectElementButton_Click(object sender, RoutedEventArgs e)
@@ -42,6 +41,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        CloseHighlight();
         _isSelecting = true;
         _mouseWasDown = IsLeftMouseButtonDown();
         SelectElementButton.Content = "Cancel";
@@ -58,32 +58,71 @@ public partial class MainWindow : Window
             return;
         }
 
+        UpdateTrackedHighlight(showFoundStatus: true);
+    }
+
+    private void HighlightTrackingTimer_Tick(object? sender, EventArgs e)
+    {
+        UpdateTrackedHighlight(showFoundStatus: false);
+    }
+
+    private void UpdateTrackedHighlight(bool showFoundStatus)
+    {
+        if (_selectedIdentity is null)
+        {
+            CloseHighlight();
+            return;
+        }
+
         try
         {
             var element = FindElement(_selectedIdentity);
 
             if (element is null)
             {
-                StatusText.Text = "Element not found.";
+                CloseHighlight();
+                StatusText.Text = "Element is no longer available.";
+                return;
+            }
+
+            var bounds = element.Current.BoundingRectangle;
+            if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                CloseHighlight();
+                StatusText.Text = "Element is not currently visible.";
                 return;
             }
 
             ShowElement(element);
-            HighlightElement(element);
-            StatusText.Text = "Element found and highlighted.";
+
+            _highlightWindow ??= new HighlightWindow();
+            _highlightWindow.ShowAt(bounds);
+
+            if (!_highlightTrackingTimer.IsEnabled)
+            {
+                _highlightTrackingTimer.Start();
+            }
+
+            if (showFoundStatus)
+            {
+                StatusText.Text = "Element found and highlighted.";
+            }
+        }
+        catch (ElementNotAvailableException)
+        {
+            CloseHighlight();
+            StatusText.Text = "Element is no longer available.";
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Find failed: {ex.Message}";
+            CloseHighlight();
+            StatusText.Text = $"Highlight failed: {ex.Message}";
         }
     }
 
     private void SelectionTimer_Tick(object? sender, EventArgs e)
     {
-        if (!_isSelecting)
-        {
-            return;
-        }
+        if (!_isSelecting) return;
 
         var isMouseDown = IsLeftMouseButtonDown();
 
@@ -131,7 +170,6 @@ public partial class MainWindow : Window
     private static ElementIdentity CreateIdentity(AutomationElement element)
     {
         var processId = element.Current.ProcessId;
-
         return new ElementIdentity(
             element.Current.Name ?? string.Empty,
             element.Current.AutomationId ?? string.Empty,
@@ -146,10 +184,7 @@ public partial class MainWindow : Window
             .Select(process => process.Id)
             .ToHashSet();
 
-        if (processIds.Count == 0)
-        {
-            return null;
-        }
+        if (processIds.Count == 0) return null;
 
         var conditions = new List<System.Windows.Automation.Condition>
         {
@@ -159,15 +194,13 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(identity.AutomationId))
         {
             conditions.Add(new PropertyCondition(
-                AutomationElement.AutomationIdProperty,
-                identity.AutomationId));
+                AutomationElement.AutomationIdProperty, identity.AutomationId));
         }
 
         if (!string.IsNullOrWhiteSpace(identity.Name))
         {
             conditions.Add(new PropertyCondition(
-                AutomationElement.NameProperty,
-                identity.Name));
+                AutomationElement.NameProperty, identity.Name));
         }
 
         var candidates = root.FindAll(
@@ -178,14 +211,10 @@ public partial class MainWindow : Window
         {
             try
             {
-                if (processIds.Contains(candidate.Current.ProcessId))
-                {
-                    return candidate;
-                }
+                if (processIds.Contains(candidate.Current.ProcessId)) return candidate;
             }
             catch (ElementNotAvailableException)
             {
-                // Candidate disappeared while the UI Automation tree was being enumerated.
             }
         }
 
@@ -195,43 +224,27 @@ public partial class MainWindow : Window
     private void ShowElement(AutomationElement element)
     {
         var processId = element.Current.ProcessId;
-        var processName = GetProcessName(processId);
-
         NameValue.Text = DisplayValue(element.Current.Name);
         AutomationIdValue.Text = DisplayValue(element.Current.AutomationId);
         ControlTypeValue.Text = DisplayValue(element.Current.ControlType?.ProgrammaticName);
-        ProcessValue.Text = DisplayValue(processName);
+        ProcessValue.Text = DisplayValue(GetProcessName(processId));
         ProcessIdValue.Text = processId > 0 ? processId.ToString() : "—";
     }
 
-    private void HighlightElement(AutomationElement element)
+    private void CloseHighlight()
     {
-        var bounds = element.Current.BoundingRectangle;
+        _highlightTrackingTimer.Stop();
 
-        if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
+        if (_highlightWindow is not null)
         {
-            StatusText.Text = "Element found, but it has no visible bounds.";
-            return;
+            _highlightWindow.Close();
+            _highlightWindow = null;
         }
-
-        _highlightWindow?.Close();
-        _highlightWindow = new HighlightWindow
-        {
-            Left = bounds.Left - 4,
-            Top = bounds.Top - 4,
-            Width = bounds.Width + 8,
-            Height = bounds.Height + 8
-        };
-        _highlightWindow.Show();
     }
 
     private bool IsOurWindow(IntPtr windowHandle)
     {
-        if (_windowHandle == IntPtr.Zero)
-        {
-            return false;
-        }
-
+        if (_windowHandle == IntPtr.Zero) return false;
         return windowHandle == _windowHandle || IsChild(_windowHandle, windowHandle);
     }
 
@@ -253,10 +266,7 @@ public partial class MainWindow : Window
 
     private static string GetProcessName(int processId)
     {
-        if (processId <= 0)
-        {
-            return string.Empty;
-        }
+        if (processId <= 0) return string.Empty;
 
         try
         {
@@ -270,9 +280,7 @@ public partial class MainWindow : Window
     }
 
     private static string DisplayValue(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? "—" : value;
-    }
+        => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int virtualKey);
