@@ -20,7 +20,7 @@
                        FontWeight="SemiBold" />
             <TextBlock Margin="0,6,0,0"
                        Foreground="#666666"
-                       Text="Select a control in another Windows application and inspect its UI Automation identity." />
+                       Text="Select a control, store its UI Automation identity, then find it again." />
         </StackPanel>
 
         <StackPanel Grid.Row="1"
@@ -31,6 +31,13 @@
                     Height="36"
                     Click="SelectElementButton_Click"
                     Content="Select Element" />
+            <Button x:Name="FindElementButton"
+                    Width="140"
+                    Height="36"
+                    Margin="10,0,0,0"
+                    Click="FindElementButton_Click"
+                    Content="Find Element"
+                    IsEnabled="False" />
             <TextBlock x:Name="StatusText"
                        Margin="14,0,0,0"
                        VerticalAlignment="Center"
