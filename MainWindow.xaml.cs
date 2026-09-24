@@ -149,7 +149,7 @@ public partial class MainWindow : Window
             return null;
         }
 
-        var conditions = new List<Condition>
+        var conditions = new List<System.Windows.Automation.Condition>
         {
             new PropertyCondition(AutomationElement.ControlTypeProperty, identity.ControlType)
         };
