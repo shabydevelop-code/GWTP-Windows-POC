@@ -170,6 +170,15 @@ Manual verification of Restore behavior is still required after pulling this cha
 - The foreground hook exists only while an element is actively tracked and is removed in Dispose; no polling or desktop UIA scan was added.
 - Re-verify multi-step Previous/Next with the target application moving behind/in front of other applications.
 
+## Windows validation test harness — 2026-09-25
+- The local multi-step harness now validates the current Windows target before allowing Next.
+- For this pre-integration test only, the expected value is the fixed string `GWTP`; this is test-harness configuration and is not an application-specific production rule.
+- Value extraction is generic through UI Automation: ValuePattern is preferred and TextPattern is used as a fallback.
+- If the target does not expose a readable value, the target disappears, or the value does not equal the expected test value, Next remains on the current step and the guidance bubble shows an inline validation message.
+- A successful validation clears the message and advances to the next local test step.
+- This harness deliberately does not persist validation definitions. Production validation engine/expression comes from authored GWTP guide-step data during integration, preserving the existing principle that GWTP validates only explicitly authored learning rules.
+- Manual verification required: choose a writable text control as step 1 plus another target as step 2; confirm Next is blocked until step 1 contains exactly `GWTP`, then confirm it advances.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
