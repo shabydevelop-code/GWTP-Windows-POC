@@ -152,6 +152,15 @@ Manual verification of Restore behavior is still required after pulling this cha
 - For Windows-only guide start, an existing suitable application instance in the current session should be reused/activated; otherwise the configured application launch mechanism may be invoked.
 - For Hybrid transitions, if the Web workflow already launched the required Windows application, the Runtime should detect/reuse it rather than launch another instance.
 
+## Multi-step Windows navigation test harness — 2026-09-25
+- Guidance Previous/Next controls are now wired locally for a pre-integration runtime test.
+- Each newly selected UIA element is appended as a temporary in-memory test step; selecting two or more controls creates a local step sequence.
+- Previous/Next switches the active target by disposing the previous ElementTrackingService, rediscovering the selected step target through the existing generic identity logic, and starting fresh tracking for the new target.
+- Navigation buttons reflect whether a previous/next local test step exists.
+- This is deliberately an in-memory validation harness, not a second persistence model: production guide steps and progress will come from GWTP.Api during integration.
+- Next verification: select at least two distinct controls in the same application and verify Next/Previous moves highlight/guidance cleanly with no stale overlay or tracking.
+- After navigation is verified, add a similarly scoped Windows validation test before API integration.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
