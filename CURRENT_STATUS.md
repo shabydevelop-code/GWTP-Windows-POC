@@ -79,6 +79,13 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Minimize continues to use the UIA IsOffscreen temporary-hidden path and must remain resumable on Restore.
 - No polling or delay was introduced.
 
+## Host window state classification — 2026-09-25
+- Host-window HIDE is no longer treated unconditionally as terminal because minimize can also hide a window.
+- On HIDE, the runtime evaluates the tracked HWND with IsWindow, IsIconic, and IsWindowVisible: destroyed/non-window -> unavailable; minimized -> temporarily hidden; hidden non-minimized host -> unavailable.
+- A lightweight EVENT_SYSTEM_FOREGROUND hook triggers the same O(1) host-HWND state evaluation when foreground ownership changes. This avoids waiting for Process.Exited in applications that retain their process/window infrastructure briefly after visible close.
+- The foreground hook performs no UIA tree scan and no polling.
+- DESTROY and Process.Exited remain terminal lifecycle signals.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
