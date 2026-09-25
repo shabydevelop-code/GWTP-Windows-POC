@@ -152,33 +152,9 @@ public partial class MainWindow : Window
     {
         if (_currentTestStepIndex < 0 || _currentTestStepIndex >= _testSteps.Count - 1) return;
 
-        DiagnosticLog.Write("ValidationNext.Begin");
-        var currentIdentity = _testSteps[_currentTestStepIndex];
-        DiagnosticLog.Write("ValidationNext.FindElement.Begin");
-        var currentElement = FindElement(currentIdentity);
-        DiagnosticLog.Write("ValidationNext.FindElement.End");
-        if (currentElement is null)
-        {
-            _guidanceWindow?.SetValidationMessage("The current element is no longer available.");
-            return;
-        }
-
-        DiagnosticLog.Write("ValidationNext.ReadValue.Begin");
-        if (!TryReadElementValue(currentElement, out var currentValue))
-        {
-            DiagnosticLog.Write("ValidationNext.ReadValue.Unsupported");
-            _guidanceWindow?.SetValidationMessage("This control does not expose a readable UI Automation value.");
-            return;
-        }
-
-        DiagnosticLog.Write("ValidationNext.ReadValue.End");
-        if (!string.Equals(currentValue, ValidationTestExpectedValue, StringComparison.Ordinal))
-        {
-            _guidanceWindow?.SetValidationMessage($"Enter {ValidationTestExpectedValue} before continuing.");
-            return;
-        }
-
-        DiagnosticLog.Write("ValidationNext.Passed");
+        // The pending-target navigation harness intentionally advances without
+        // requiring validation. Validation capability remains implemented below
+        // for later API-driven authored rules.
         _guidanceWindow?.SetValidationMessage(null);
         _currentTestStepIndex++;
         ShowCurrentTestStep();
