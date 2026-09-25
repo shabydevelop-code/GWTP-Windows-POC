@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Automation;
@@ -10,8 +11,10 @@ internal sealed class ElementTrackingService : IDisposable
     private readonly AutomationElement _element;
     private readonly Dispatcher _dispatcher;
     private IntPtr _hostWindow;
-    private IntPtr _winEventHook;
+    private IntPtr _locationWinEventHook;
+    private IntPtr _destroyWinEventHook;
     private WinEventDelegate? _winEventDelegate;
+    private Process? _hostProcess;
     private bool _disposed;
 
     public event Action<Rect>? BoundsChanged;
@@ -48,12 +51,43 @@ internal sealed class ElementTrackingService : IDisposable
         if (_hostWindow != IntPtr.Zero)
         {
             _winEventDelegate = OnWinEvent;
-            _winEventHook = SetWinEventHook(
+
+            GetWindowThreadProcessId(_hostWindow, out var processId);
+            if (processId != 0)
+            {
+                try
+                {
+                    _hostProcess = Process.GetProcessById((int)processId);
+                    _hostProcess.EnableRaisingEvents = true;
+                    _hostProcess.Exited += OnHostProcessExited;
+                }
+                catch (ArgumentException)
+                {
+                    NotifyUnavailable();
+                    return;
+                }
+                catch (InvalidOperationException)
+                {
+                    NotifyUnavailable();
+                    return;
+                }
+            }
+
+            _locationWinEventHook = SetWinEventHook(
                 EventObjectLocationChange,
                 EventObjectLocationChange,
                 IntPtr.Zero,
                 _winEventDelegate,
+                processId,
                 0,
+                WineventOutofcontext | WineventSkipownprocess);
+
+            _destroyWinEventHook = SetWinEventHook(
+                EventObjectDestroy,
+                EventObjectDestroy,
+                IntPtr.Zero,
+                _winEventDelegate,
+                processId,
                 0,
                 WineventOutofcontext | WineventSkipownprocess);
         }
@@ -79,9 +113,23 @@ internal sealed class ElementTrackingService : IDisposable
             return;
         }
 
-        if (hwnd == _hostWindow || IsChild(_hostWindow, hwnd))
+        if (eventType == EventObjectDestroy && hwnd == _hostWindow)
+        {
+            _dispatcher.BeginInvoke(NotifyUnavailable);
+            return;
+        }
+
+        if (eventType == EventObjectLocationChange && (hwnd == _hostWindow || IsChild(_hostWindow, hwnd)))
         {
             _dispatcher.BeginInvoke(RefreshBounds);
+        }
+    }
+
+    private void OnHostProcessExited(object? sender, EventArgs e)
+    {
+        if (!_disposed)
+        {
+            _dispatcher.BeginInvoke(NotifyUnavailable);
         }
     }
 
@@ -162,15 +210,29 @@ internal sealed class ElementTrackingService : IDisposable
         {
         }
 
-        if (_winEventHook != IntPtr.Zero)
+        if (_hostProcess is not null)
         {
-            UnhookWinEvent(_winEventHook);
-            _winEventHook = IntPtr.Zero;
+            _hostProcess.Exited -= OnHostProcessExited;
+            _hostProcess.Dispose();
+            _hostProcess = null;
+        }
+
+        if (_locationWinEventHook != IntPtr.Zero)
+        {
+            UnhookWinEvent(_locationWinEventHook);
+            _locationWinEventHook = IntPtr.Zero;
+        }
+
+        if (_destroyWinEventHook != IntPtr.Zero)
+        {
+            UnhookWinEvent(_destroyWinEventHook);
+            _destroyWinEventHook = IntPtr.Zero;
         }
 
         _winEventDelegate = null;
     }
 
+    private const uint EventObjectDestroy = 0x8001;
     private const uint EventObjectLocationChange = 0x800B;
     private const uint WineventOutofcontext = 0x0000;
     private const uint WineventSkipownprocess = 0x0002;
@@ -201,6 +263,9 @@ internal sealed class ElementTrackingService : IDisposable
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
