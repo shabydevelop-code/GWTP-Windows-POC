@@ -4,7 +4,7 @@ Last updated: 2026-09-25
 
 ## Implemented
 - WPF element picker uses UI Automation FromPoint and highlights the hovered control.
-- Selected element identity currently stores Name, AutomationId, ControlType, and ProcessName.
+- Selected element identity currently stores Name, AutomationId, ControlType, and ProcessName. Runtime rediscovery additionally scopes matching processes to the current Windows SessionId.
 - FindElement rediscovery is generic by process name plus UIA properties; no Notepad-specific targeting is hard-coded.
 - HighlightWindow provides a transparent, click-through, non-activating target outline.
 - GuidanceWindow provides a separate non-activating guidance bubble positioned near the target.
@@ -65,10 +65,16 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Dispose unsubscribes Process.Exited, disposes the Process object, and unhooks both WinEvent hooks.
 - This is production-oriented lifecycle handling and preserves the event-only/no-polling rule.
 
+## RDS session-safe target rediscovery — 2026-09-25
+- FindElement now restricts ProcessName matches to processes whose Process.SessionId equals the Windows Runtime's current SessionId.
+- Processes from other simultaneous RDS sessions are excluded before UIA candidate matching.
+- SessionId is runtime context and is not persisted as part of the reusable authored element identity.
+- Process handles returned by GetProcessesByName are disposed after inspection.
+- This removes the previously documented cross-session process-discovery gap while preserving generic application targeting.
+
 ## Known limitations / next work
-1. Process rediscovery is not yet scoped to the current Windows SessionId and is therefore not RDS-safe.
-2. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
-3. Guidance Previous/Next is still POC UI and is not connected to GWTP.Api learner progress.
-4. A separate step runtime/platform model is required in the main GWTP data/API model; existing TargetType must remain element/none.
-5. Secure learner/token handoff between the browser extension and Windows runtime remains to be designed.
-6. After Windows targeting is hardened, implement the first production-compatible WEB -> WINDOWS -> WEB integration slice.
+1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
+2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
+3. A separate step runtime/platform model is required in the main GWTP data/API model; existing TargetType must remain element/none.
+4. Secure learner/token handoff between the browser extension and Windows runtime remains to be designed.
+5. After Windows targeting is hardened, implement the first production-compatible WEB -> WINDOWS -> WEB integration slice.
