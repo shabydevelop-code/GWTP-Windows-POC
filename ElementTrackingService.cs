@@ -12,6 +12,9 @@ internal sealed class ElementTrackingService : IDisposable
     private readonly AutomationElement _element;
     private readonly Dispatcher _dispatcher;
     private IntPtr _hostWindow;
+    private IntPtr _elementWindow;
+    private IntPtr _rootWindow;
+    private IntPtr _ownerWindow;
     private IntPtr _locationWinEventHook;
     private IntPtr _destroyWinEventHook;
     private IntPtr _hideWinEventHook;
@@ -54,7 +57,7 @@ internal sealed class ElementTrackingService : IDisposable
             return;
         }
 
-        _hostWindow = GetHostWindowHandle(_element);
+        CaptureWindowChain(_element);
         if (_hostWindow != IntPtr.Zero)
         {
             _winEventDelegate = OnWinEvent;
@@ -277,6 +280,41 @@ internal sealed class ElementTrackingService : IDisposable
         }
     }
 
+    private void CaptureWindowChain(AutomationElement element)
+    {
+        try
+        {
+            var current = element;
+            while (current is not null)
+            {
+                var handle = new IntPtr(current.Current.NativeWindowHandle);
+                if (handle != IntPtr.Zero)
+                {
+                    _elementWindow = handle;
+                    _rootWindow = GetAncestor(handle, GaRoot);
+                    _ownerWindow = GetWindow(_rootWindow, GwOwner);
+                    _hostWindow = _rootWindow;
+                    Trace($"WindowChain: element=0x{_elementWindow.ToInt64():X}, root=0x{_rootWindow.ToInt64():X}, owner=0x{_ownerWindow.ToInt64():X}, rootClass={GetWindowClassName(_rootWindow)}, ownerClass={GetWindowClassName(_ownerWindow)}");
+                    return;
+                }
+
+                current = TreeWalker.ControlViewWalker.GetParent(current);
+            }
+        }
+        catch (ElementNotAvailableException)
+        {
+        }
+
+        Trace("WindowChain: no native window handle found");
+    }
+
+    private static string GetWindowClassName(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return "<none>";
+        var buffer = new System.Text.StringBuilder(256);
+        return GetClassName(hwnd, buffer, buffer.Capacity) > 0 ? buffer.ToString() : "<unknown>";
+    }
+
     private static IntPtr GetHostWindowHandle(AutomationElement element)
     {
         try
@@ -407,6 +445,7 @@ internal sealed class ElementTrackingService : IDisposable
     private const uint WineventOutofcontext = 0x0000;
     private const uint WineventSkipownprocess = 0x0002;
     private const uint GaRoot = 2;
+    private const uint GwOwner = 4;
     private const int ObjidWindow = 0;
 
     private delegate void WinEventDelegate(
@@ -434,6 +473,12 @@ internal sealed class ElementTrackingService : IDisposable
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetWindow(IntPtr hwnd, uint command);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder className, int maxCount);
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
