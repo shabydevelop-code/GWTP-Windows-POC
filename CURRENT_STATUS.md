@@ -137,6 +137,12 @@ Manual verification of Restore behavior is still required after pulling this cha
 - EVENT_OBJECT_HIDE was the first observed existing signal at which IsWindowVisible became false; GWTP therefore keeps definitive HIDE/DESTROY/Process.Exited close handling rather than introducing a heuristic.
 - No timer, polling, desktop scan, cross-process close-message hook, or application-specific close behavior was added.
 
+## Runtime shutdown ordering — 2026-09-25
+- MainWindow now tears down the active tracker, highlight, and guidance window during the WPF Closing phase rather than waiting for Closed.
+- The element-selection timer is also stopped during Closing.
+- This ensures GWTP-owned top-level overlay windows are explicitly closed before the main window completes shutdown, avoiding overlay lifetime extending beyond the initiating window's close sequence.
+- This change is runtime-generic and does not alter host-application close detection or Minimize/Restore behavior.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
