@@ -18,6 +18,13 @@
             <DropShadowEffect BlurRadius="14" Opacity="0.25" ShadowDepth="3" />
         </Border.Effect>
         <StackPanel Width="268">
+            <Border x:Name="DragHandle"
+                    Height="18"
+                    Margin="0,-8,0,2"
+                    Background="Transparent"
+                    Cursor="SizeAll"
+                    MouseLeftButtonDown="DragHandle_MouseLeftButtonDown"
+                    ToolTip="Drag to move" />
             <TextBlock FontSize="14"
                        FontWeight="SemiBold"
                        Text="Step 1" />
