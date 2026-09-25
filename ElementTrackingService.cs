@@ -15,6 +15,7 @@ internal sealed class ElementTrackingService : IDisposable
     private IntPtr _destroyWinEventHook;
     private IntPtr _hideWinEventHook;
     private IntPtr _foregroundWinEventHook;
+    private IntPtr _windowEventHook;
     private WinEventDelegate? _winEventDelegate;
     private Process? _hostProcess;
     private bool _disposed;
@@ -110,6 +111,15 @@ internal sealed class ElementTrackingService : IDisposable
                 0,
                 0,
                 WineventOutofcontext | WineventSkipownprocess);
+
+            _windowEventHook = SetWinEventHook(
+                EventSystemMinimizeStart,
+                EventSystemMinimizeEnd,
+                IntPtr.Zero,
+                _winEventDelegate,
+                processId,
+                0,
+                WineventOutofcontext | WineventSkipownprocess);
         }
 
     }
@@ -146,6 +156,18 @@ internal sealed class ElementTrackingService : IDisposable
             objectId == ObjidWindow)
         {
             _dispatcher.BeginInvoke(EvaluateHostWindowVisibility);
+            return;
+        }
+
+        if (eventType == EventSystemMinimizeStart && hwnd == _hostWindow)
+        {
+            _dispatcher.BeginInvoke(() => ElementTemporarilyHidden?.Invoke());
+            return;
+        }
+
+        if (eventType == EventSystemMinimizeEnd && hwnd == _hostWindow)
+        {
+            _dispatcher.BeginInvoke(RefreshBounds);
             return;
         }
 
@@ -302,10 +324,18 @@ internal sealed class ElementTrackingService : IDisposable
             _foregroundWinEventHook = IntPtr.Zero;
         }
 
+        if (_windowEventHook != IntPtr.Zero)
+        {
+            UnhookWinEvent(_windowEventHook);
+            _windowEventHook = IntPtr.Zero;
+        }
+
         _winEventDelegate = null;
     }
 
     private const uint EventSystemForeground = 0x0003;
+    private const uint EventSystemMinimizeStart = 0x0016;
+    private const uint EventSystemMinimizeEnd = 0x0017;
     private const uint EventObjectDestroy = 0x8001;
     private const uint EventObjectHide = 0x8003;
     private const uint EventObjectLocationChange = 0x800B;
