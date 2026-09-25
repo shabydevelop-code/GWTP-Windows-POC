@@ -36,6 +36,13 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Manual positioning is intentionally local to the current GuidanceWindow instance. Closing/recreating the guidance window (including temporary hide/restore) returns it to automatic positioning.
 - This provides a lightweight escape hatch when menus, dropdowns, dialogs, or application content would otherwise be covered, without adding UIA-tree scans to the tracking hot path.
 
+## Web/Windows guidance visual parity — 2026-09-25
+- Windows GuidanceWindow structure and styling now mirrors the current Web learner guidance bubble from `extension/content/overlay/training-runner.js`.
+- Matched the current Web bubble's 340px maximum-width concept, white surface, #D6008F guidance accent, 2px border / 3px top border, 12px radius, #172033 text, centered controls, and six-dot #94A3B8 drag handle.
+- Removed the Windows-only visible "Step 1" heading because the Web bubble renders the authored instruction as the primary content.
+- Previous/Next remain POC controls until API progress wiring, but their visual structure now follows the Web bubble.
+- Existing manual drag behavior and event-driven element tracking are preserved.
+
 ## Known limitations / next work
 1. Process rediscovery is not yet scoped to the current Windows SessionId and is therefore not RDS-safe.
 2. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
