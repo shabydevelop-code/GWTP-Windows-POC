@@ -29,6 +29,13 @@ Manual verification of Restore behavior is still required after pulling this cha
 - The proven movement tracking and Minimize/Restore behavior have been restored unchanged.
 - Any next collision-management approach must not perform RootElement descendant scans on the hot tracking path. Prefer direct WinEvent/window geometry or another lightweight event-driven mechanism, and validate it separately before integrating it into target movement tracking.
 
+## Manual guidance positioning — 2026-09-25
+- GuidanceWindow now has a dedicated transparent drag handle at the top of the bubble.
+- Dragging the handle switches that guidance instance to manual positioning.
+- While manual positioning is active, target movement continues to update the highlight immediately but no longer forces the guidance bubble back beside the target.
+- Manual positioning is intentionally local to the current GuidanceWindow instance. Closing/recreating the guidance window (including temporary hide/restore) returns it to automatic positioning.
+- This provides a lightweight escape hatch when menus, dropdowns, dialogs, or application content would otherwise be covered, without adding UIA-tree scans to the tracking hot path.
+
 ## Known limitations / next work
 1. Process rediscovery is not yet scoped to the current Windows SessionId and is therefore not RDS-safe.
 2. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
