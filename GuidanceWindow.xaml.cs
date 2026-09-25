@@ -48,7 +48,7 @@ public partial class GuidanceWindow : Window
                 (int)Math.Round(targetBounds.Top + (targetBounds.Height / 2))));
 
         var workArea = screen.WorkingArea;
-        var width = Math.Max(ActualWidth, 300);
+        var width = Math.Max(ActualWidth, 340);
         var height = Math.Max(ActualHeight, 130);
         const int gap = 12;
 
