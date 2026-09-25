@@ -18,6 +18,9 @@ public partial class GuidanceWindow : Window
     private IntPtr _handle;
     private bool _manualPosition;
 
+    public event Action? PreviousRequested;
+    public event Action? NextRequested;
+
     public GuidanceWindow()
     {
         InitializeComponent();
@@ -69,6 +72,16 @@ public partial class GuidanceWindow : Window
             (int)Math.Round(height),
             SwpNoActivate | SwpShowWindow);
     }
+
+    public void SetNavigationState(bool canPrevious, bool canNext)
+    {
+        PreviousButton.IsEnabled = canPrevious;
+        NextButton.IsEnabled = canNext;
+    }
+
+    private void PreviousButton_Click(object sender, RoutedEventArgs e) => PreviousRequested?.Invoke();
+
+    private void NextButton_Click(object sender, RoutedEventArgs e) => NextRequested?.Invoke();
 
     public void ResetManualPosition()
     {
