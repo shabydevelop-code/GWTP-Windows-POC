@@ -49,6 +49,12 @@
                        TextWrapping="Wrap"
                        Text="Enter text in the highlighted field." />
 
+            <TextBlock x:Name="ValidationMessage"
+                       Margin="0,10,0,0"
+                       Foreground="#B42318"
+                       TextWrapping="Wrap"
+                       Visibility="Collapsed" />
+
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Center"
                         Margin="0,12,0,0">
