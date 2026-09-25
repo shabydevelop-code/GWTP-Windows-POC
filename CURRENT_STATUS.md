@@ -130,6 +130,13 @@ Manual verification of Restore behavior is still required after pulling this cha
 - The temporary native window-chain fields remain in use for generic minimize-event matching; no application-specific rule was introduced.
 - Known limitation: definitive host-window close detection can lag the user's close action when the host application delays HIDE/DESTROY.
 
+## Visibility lifecycle diagnostic — 2026-09-25
+- Temporary, narrowly scoped instrumentation records only visibility/state values already observed by the production tracker: UIA IsOffscreen/BoundingRectangle plus Win32 IsWindow/IsWindowVisible/IsIconic.
+- It runs only when an existing UIA property-change or relevant WinEvent is already delivered; it adds no timer, polling loop, desktop scan, close hook, or application-specific behavior.
+- Diagnostic output is written to `%LOCALAPPDATA%\GWTP\Logs\windows-visibility.log` to compare Minimize and Close behavior in Notepad and Word.
+- Purpose: determine whether an existing visibility signal becomes non-visible early enough to temporarily hide guidance before definitive HIDE/DESTROY.
+- This instrumentation is temporary and must be removed after the comparison.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
