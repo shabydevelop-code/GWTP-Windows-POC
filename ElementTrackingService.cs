@@ -13,6 +13,7 @@ internal sealed class ElementTrackingService : IDisposable
     private IntPtr _hostWindow;
     private IntPtr _locationWinEventHook;
     private IntPtr _destroyWinEventHook;
+    private IntPtr _hideWinEventHook;
     private WinEventDelegate? _winEventDelegate;
     private Process? _hostProcess;
     private bool _disposed;
@@ -90,6 +91,15 @@ internal sealed class ElementTrackingService : IDisposable
                 processId,
                 0,
                 WineventOutofcontext | WineventSkipownprocess);
+
+            _hideWinEventHook = SetWinEventHook(
+                EventObjectHide,
+                EventObjectHide,
+                IntPtr.Zero,
+                _winEventDelegate,
+                processId,
+                0,
+                WineventOutofcontext | WineventSkipownprocess);
         }
 
     }
@@ -113,7 +123,9 @@ internal sealed class ElementTrackingService : IDisposable
             return;
         }
 
-        if (eventType == EventObjectDestroy && hwnd == _hostWindow)
+        if ((eventType == EventObjectDestroy || eventType == EventObjectHide) &&
+            hwnd == _hostWindow &&
+            objectId == ObjidWindow)
         {
             _dispatcher.BeginInvoke(NotifyUnavailable);
             return;
@@ -229,14 +241,22 @@ internal sealed class ElementTrackingService : IDisposable
             _destroyWinEventHook = IntPtr.Zero;
         }
 
+        if (_hideWinEventHook != IntPtr.Zero)
+        {
+            UnhookWinEvent(_hideWinEventHook);
+            _hideWinEventHook = IntPtr.Zero;
+        }
+
         _winEventDelegate = null;
     }
 
     private const uint EventObjectDestroy = 0x8001;
+    private const uint EventObjectHide = 0x8003;
     private const uint EventObjectLocationChange = 0x800B;
     private const uint WineventOutofcontext = 0x0000;
     private const uint WineventSkipownprocess = 0x0002;
     private const uint GaRoot = 2;
+    private const int ObjidWindow = 0;
 
     private delegate void WinEventDelegate(
         IntPtr hook,
