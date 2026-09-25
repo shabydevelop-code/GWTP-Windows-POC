@@ -202,6 +202,16 @@ Manual verification of Restore behavior is still required after pulling this cha
 - The earlier AppHangB1 remains documented as an isolated observed hang with no confirmed validation cause. Persistent runtime diagnostics remain enabled so a recurrence can be localized.
 - The Windows runtime is therefore ready for the next integration slice: production-compatible Web -> Windows -> Web handoff using the existing GWTP learner/progress model rather than the local in-memory harness.
 
+## Pending Windows target/window test — 2026-09-25
+- The local multi-step harness now supports a next step whose Windows target is not currently available.
+- When navigation reaches an unavailable Windows target, the active highlight/guidance is removed and the runtime enters an explicit pending-target state without advancing again or showing a stale bubble.
+- Pending discovery is event-driven through UI Automation `WindowPattern.WindowOpenedEvent`; no timer, retry loop, or periodic UIA scan is used.
+- Each relevant window-open event triggers one generic rediscovery attempt using the pending step's existing process/session/UIA identity. Unrelated windows are ignored when the authored target still cannot be resolved.
+- Once the target becomes resolvable, the pending watcher is removed and normal element tracking plus guidance starts automatically.
+- Closing/replacing the active training state disposes the pending watcher.
+- Manual verification required: author/select two local test targets, make the second target unavailable, navigate from step 1 to step 2, verify that no guidance is shown while waiting, then open the second target's window and verify that highlight/guidance appears automatically.
+- Current scope intentionally validates a target that becomes available because a window opens. Targets materializing dynamically inside an already-open window will require an appropriate lifecycle signal during production integration rather than polling.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
