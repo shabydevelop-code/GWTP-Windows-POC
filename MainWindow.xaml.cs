@@ -282,7 +282,23 @@ public partial class MainWindow : Window
     private static AutomationElement? FindElement(ElementIdentity identity)
     {
         var root = AutomationElement.RootElement;
+        var currentSessionId = Process.GetCurrentProcess().SessionId;
         var processIds = Process.GetProcessesByName(identity.ProcessName)
+            .Where(process =>
+            {
+                try
+                {
+                    return process.SessionId == currentSessionId;
+                }
+                catch
+                {
+                    return false;
+                }
+                finally
+                {
+                    process.Dispose();
+                }
+            })
             .Select(process => process.Id)
             .ToHashSet();
 
