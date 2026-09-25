@@ -92,6 +92,12 @@ Manual verification of Restore behavior is still required after pulling this cha
 - MINIMIZESTART hides guidance/highlight immediately while retaining tracking; MINIMIZEEND immediately refreshes the tracked element and restores overlays when bounds are valid.
 - This remains fully event-driven and adds no timer, polling, or UIA-tree scan.
 
+## Tracking lifecycle instrumentation — 2026-09-25
+- Temporary diagnostic instrumentation records millisecond timestamps for UIA property changes, relevant WinEvents, host-window state evaluation, RefreshBounds, and ElementUnavailable.
+- Diagnostic lines are written to Debug output and surfaced in the runtime StatusText so event latency can be measured without adding polling or delays.
+- This instrumentation is specifically intended to identify which native/UIA lifecycle signal is actually delayed during minimize/close before simplifying the production hook set.
+- After the reliable lifecycle signal is established, remove or reduce user-visible diagnostic output and retain only appropriate production logging.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
