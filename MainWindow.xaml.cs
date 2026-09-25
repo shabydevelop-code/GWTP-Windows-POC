@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     private ElementIdentity? _selectedIdentity;
     private readonly List<ElementIdentity> _testSteps = new();
     private int _currentTestStepIndex = -1;
+    private const string ValidationTestExpectedValue = "GWTP";
     private HighlightWindow? _highlightWindow;
     private AutomationElement? _hoveredElement;
     private GuidanceWindow? _guidanceWindow;
@@ -141,8 +142,58 @@ public partial class MainWindow : Window
     private void OnNextRequested()
     {
         if (_currentTestStepIndex < 0 || _currentTestStepIndex >= _testSteps.Count - 1) return;
+
+        var currentIdentity = _testSteps[_currentTestStepIndex];
+        var currentElement = FindElement(currentIdentity);
+        if (currentElement is null)
+        {
+            _guidanceWindow?.SetValidationMessage("The current element is no longer available.");
+            return;
+        }
+
+        if (!TryReadElementValue(currentElement, out var currentValue))
+        {
+            _guidanceWindow?.SetValidationMessage("This control does not expose a readable UI Automation value.");
+            return;
+        }
+
+        if (!string.Equals(currentValue, ValidationTestExpectedValue, StringComparison.Ordinal))
+        {
+            _guidanceWindow?.SetValidationMessage($"Enter {ValidationTestExpectedValue} before continuing.");
+            return;
+        }
+
+        _guidanceWindow?.SetValidationMessage(null);
         _currentTestStepIndex++;
         ShowCurrentTestStep();
+    }
+
+    private static bool TryReadElementValue(AutomationElement element, out string value)
+    {
+        value = string.Empty;
+
+        try
+        {
+            if (element.TryGetCurrentPattern(ValuePattern.Pattern, out var valuePatternObject) &&
+                valuePatternObject is ValuePattern valuePattern)
+            {
+                value = valuePattern.Current.Value ?? string.Empty;
+                return true;
+            }
+
+            if (element.TryGetCurrentPattern(TextPattern.Pattern, out var textPatternObject) &&
+                textPatternObject is TextPattern textPattern)
+            {
+                value = textPattern.DocumentRange.GetText(-1).TrimEnd('\r', '\n');
+                return true;
+            }
+
+            return false;
+        }
+        catch (ElementNotAvailableException)
+        {
+            return false;
+        }
     }
 
     private void ShowCurrentTestStep()
@@ -150,6 +201,7 @@ public partial class MainWindow : Window
         if (_currentTestStepIndex < 0 || _currentTestStepIndex >= _testSteps.Count) return;
 
         _selectedIdentity = _testSteps[_currentTestStepIndex];
+        _guidanceWindow?.SetValidationMessage(null);
         UpdateTrackedHighlight(showFoundStatus: false);
         UpdateGuidanceNavigationState();
         StatusText.Text = $"Showing test step {_currentTestStepIndex + 1} of {_testSteps.Count}.";
