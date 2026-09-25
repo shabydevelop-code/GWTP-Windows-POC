@@ -179,6 +179,12 @@ Manual verification of Restore behavior is still required after pulling this cha
 - This harness deliberately does not persist validation definitions. Production validation engine/expression comes from authored GWTP guide-step data during integration, preserving the existing principle that GWTP validates only explicitly authored learning rules.
 - Manual verification required: choose a writable text control as step 1 plus another target as step 2; confirm Next is blocked until step 1 contains exactly `GWTP`, then confirm it advances.
 
+## Runtime stability observation during validation test — 2026-09-25
+- During manual testing of the new Windows validation harness, the GWTP Windows Runtime process exited unexpectedly at an as-yet unidentified point.
+- The cause has not been diagnosed and must not be assumed to be the validation logic without evidence.
+- Before treating multi-step validation as verified or beginning Web/Windows integration, reproduce the failure and capture the exception/process-exit evidence so the runtime crash path can be fixed.
+- Current validation functionality therefore remains pending manual verification despite the harness implementation.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
