@@ -9,7 +9,7 @@ Last updated: 2026-09-25
 - HighlightWindow provides a transparent, click-through, non-activating target outline.
 - GuidanceWindow provides a separate non-activating guidance bubble positioned near the target.
 - ElementTrackingService follows target movement using UIA BoundingRectangle/IsOffscreen property changes and WinEvent EVENT_OBJECT_LOCATIONCHANGE.
-- A low-frequency 2-second health refresh exists as a fallback; event-driven tracking is the primary mechanism.
+- Element tracking is fully event-driven; the former 2-second health-check polling timer has been removed.
 - Manual verification confirmed that highlight and guidance remain attached while the Notepad window moves.
 
 ## Minimize / Restore fix — 2026-09-25
@@ -42,6 +42,13 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Removed the Windows-only visible "Step 1" heading because the Web bubble renders the authored instruction as the primary content.
 - Previous/Next remain POC controls until API progress wiring, but their visual structure now follows the Web bubble.
 - Existing manual drag behavior and event-driven element tracking are preserved.
+
+## Event-only tracking — 2026-09-25
+- Removed the 2-second DispatcherTimer health check from ElementTrackingService.
+- Normal learner tracking now performs no periodic polling: bounds refreshes are triggered by UI Automation property-change events and WinEvent EVENT_OBJECT_LOCATIONCHANGE only.
+- Start() still performs one immediate RefreshBounds() to render the initial state.
+- This reduces unnecessary per-session background work for the intended multi-user/RDS architecture.
+- Minimize/Restore and host-close behavior should be re-verified manually without the fallback timer.
 
 ## Known limitations / next work
 1. Process rediscovery is not yet scoped to the current Windows SessionId and is therefore not RDS-safe.
