@@ -9,7 +9,6 @@ internal sealed class ElementTrackingService : IDisposable
 {
     private readonly AutomationElement _element;
     private readonly Dispatcher _dispatcher;
-    private readonly DispatcherTimer _healthTimer;
     private IntPtr _hostWindow;
     private IntPtr _winEventHook;
     private WinEventDelegate? _winEventDelegate;
@@ -24,11 +23,6 @@ internal sealed class ElementTrackingService : IDisposable
         _element = element;
         _dispatcher = dispatcher;
 
-        _healthTimer = new DispatcherTimer(DispatcherPriority.Background, dispatcher)
-        {
-            Interval = TimeSpan.FromSeconds(2)
-        };
-        _healthTimer.Tick += (_, _) => RefreshBounds();
     }
 
     public void Start()
@@ -64,7 +58,6 @@ internal sealed class ElementTrackingService : IDisposable
                 WineventOutofcontext | WineventSkipownprocess);
         }
 
-        _healthTimer.Start();
     }
 
     private void OnAutomationPropertyChanged(object sender, AutomationPropertyChangedEventArgs e)
@@ -161,8 +154,6 @@ internal sealed class ElementTrackingService : IDisposable
         }
 
         _disposed = true;
-        _healthTimer.Stop();
-
         try
         {
             Automation.RemoveAutomationPropertyChangedEventHandler(_element, OnAutomationPropertyChanged);
