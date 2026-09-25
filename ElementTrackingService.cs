@@ -18,6 +18,7 @@ internal sealed class ElementTrackingService : IDisposable
     private IntPtr _destroyWinEventHook;
     private IntPtr _hideWinEventHook;
     private IntPtr _windowEventHook;
+    private IntPtr _foregroundWinEventHook;
     private WinEventDelegate? _winEventDelegate;
     private Process? _hostProcess;
     private bool _disposed;
@@ -25,6 +26,7 @@ internal sealed class ElementTrackingService : IDisposable
     public event Action<Rect>? BoundsChanged;
     public event Action? ElementTemporarilyHidden;
     public event Action? ElementUnavailable;
+    public event Action? HostActivated;
 
     public ElementTrackingService(AutomationElement element, Dispatcher dispatcher)
     {
@@ -114,6 +116,15 @@ internal sealed class ElementTrackingService : IDisposable
                 0,
                 WineventOutofcontext | WineventSkipownprocess);
 
+            _foregroundWinEventHook = SetWinEventHook(
+                EventSystemForeground,
+                EventSystemForeground,
+                IntPtr.Zero,
+                _winEventDelegate,
+                0,
+                0,
+                WineventOutofcontext | WineventSkipownprocess);
+
         }
 
     }
@@ -134,6 +145,23 @@ internal sealed class ElementTrackingService : IDisposable
     {
         if (_disposed || hwnd == IntPtr.Zero || _hostWindow == IntPtr.Zero)
         {
+            return;
+        }
+
+        if (eventType == EventSystemForeground)
+        {
+            _dispatcher.BeginInvoke(() =>
+            {
+                if (IsHostWindowEvent(hwnd))
+                {
+                    HostActivated?.Invoke();
+                    RefreshBounds();
+                }
+                else
+                {
+                    ElementTemporarilyHidden?.Invoke();
+                }
+            });
             return;
         }
 
@@ -359,9 +387,16 @@ internal sealed class ElementTrackingService : IDisposable
             _windowEventHook = IntPtr.Zero;
         }
 
+        if (_foregroundWinEventHook != IntPtr.Zero)
+        {
+            UnhookWinEvent(_foregroundWinEventHook);
+            _foregroundWinEventHook = IntPtr.Zero;
+        }
+
         _winEventDelegate = null;
     }
 
+    private const uint EventSystemForeground = 0x0003;
     private const uint EventSystemMinimizeStart = 0x0016;
     private const uint EventSystemMinimizeEnd = 0x0017;
     private const uint EventObjectDestroy = 0x8001;
