@@ -98,6 +98,12 @@ Manual verification of Restore behavior is still required after pulling this cha
 - This instrumentation is specifically intended to identify which native/UIA lifecycle signal is actually delayed during minimize/close before simplifying the production hook set.
 - After the reliable lifecycle signal is established, remove or reduce user-visible diagnostic output and retain only appropriate production logging.
 
+## Persistent tracking diagnostic log — 2026-09-25
+- Tracking lifecycle diagnostics are also appended to %LOCALAPPDATA%\GWTP\Logs\windows-tracking.log.
+- Each line includes the local date plus millisecond-resolution event time.
+- Logging failures are swallowed so diagnostics cannot interfere with runtime tracking.
+- This is temporary diagnostic instrumentation for isolating delayed host-window close notification and should be reduced/removed after the production lifecycle signal is established.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
