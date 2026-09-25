@@ -72,6 +72,13 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Process handles returned by GetProcessesByName are disposed after inspection.
 - This removes the previously documented cross-session process-discovery gap while preserving generic application targeting.
 
+## Immediate host-window close handling — 2026-09-25
+- Modern applications may keep their process alive briefly after the visible host window closes, so Process.Exited is not sufficient for immediate guidance cleanup.
+- ElementTrackingService now also listens for process-scoped EVENT_OBJECT_HIDE for the tracked host HWND, restricted to OBJID_WINDOW.
+- Host-window HIDE or DESTROY is treated as terminal for the current tracked target and raises ElementUnavailable immediately; Process.Exited remains a lifecycle fallback.
+- Minimize continues to use the UIA IsOffscreen temporary-hidden path and must remain resumable on Restore.
+- No polling or delay was introduced.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
