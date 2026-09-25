@@ -15,7 +15,7 @@ internal sealed class ElementTrackingService : IDisposable
     private WinEventDelegate? _winEventDelegate;
     private bool _disposed;
 
-    public event Action<Rect, IReadOnlyCollection<Rect>>? BoundsChanged;
+    public event Action<Rect>? BoundsChanged;
     public event Action? ElementTemporarilyHidden;
     public event Action? ElementUnavailable;
 
@@ -37,17 +37,6 @@ internal sealed class ElementTrackingService : IDisposable
 
         try
         {
-            Automation.AddAutomationEventHandler(
-                AutomationElement.MenuOpenedEvent,
-                AutomationElement.RootElement,
-                TreeScope.Subtree,
-                OnTransientUiChanged);
-            Automation.AddAutomationEventHandler(
-                AutomationElement.MenuClosedEvent,
-                AutomationElement.RootElement,
-                TreeScope.Subtree,
-                OnTransientUiChanged);
-
             Automation.AddAutomationPropertyChangedEventHandler(
                 _element,
                 TreeScope.Element,
@@ -76,11 +65,6 @@ internal sealed class ElementTrackingService : IDisposable
         }
 
         _healthTimer.Start();
-    }
-
-    private void OnTransientUiChanged(object sender, AutomationEventArgs e)
-    {
-        _dispatcher.BeginInvoke(RefreshBounds);
     }
 
     private void OnAutomationPropertyChanged(object sender, AutomationPropertyChangedEventArgs e)
@@ -126,7 +110,7 @@ internal sealed class ElementTrackingService : IDisposable
                 return;
             }
 
-            BoundsChanged?.Invoke(bounds, GetTransientUiBounds());
+            BoundsChanged?.Invoke(bounds);
         }
         catch (ElementNotAvailableException)
         {
@@ -136,43 +120,6 @@ internal sealed class ElementTrackingService : IDisposable
         {
             NotifyUnavailable();
         }
-    }
-
-    private IReadOnlyCollection<Rect> GetTransientUiBounds()
-    {
-        var bounds = new List<Rect>();
-
-        try
-        {
-            var menus = AutomationElement.RootElement.FindAll(
-                TreeScope.Descendants,
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Menu));
-
-            foreach (AutomationElement menu in menus)
-            {
-                try
-                {
-                    if (menu.Current.IsOffscreen || menu.Current.ProcessId != _element.Current.ProcessId)
-                    {
-                        continue;
-                    }
-
-                    var menuBounds = menu.Current.BoundingRectangle;
-                    if (!menuBounds.IsEmpty && menuBounds.Width > 0 && menuBounds.Height > 0)
-                    {
-                        bounds.Add(menuBounds);
-                    }
-                }
-                catch (ElementNotAvailableException)
-                {
-                }
-            }
-        }
-        catch (ElementNotAvailableException)
-        {
-        }
-
-        return bounds;
     }
 
     private void NotifyUnavailable()
@@ -218,14 +165,6 @@ internal sealed class ElementTrackingService : IDisposable
 
         try
         {
-            Automation.RemoveAutomationEventHandler(
-                AutomationElement.MenuOpenedEvent,
-                AutomationElement.RootElement,
-                OnTransientUiChanged);
-            Automation.RemoveAutomationEventHandler(
-                AutomationElement.MenuClosedEvent,
-                AutomationElement.RootElement,
-                OnTransientUiChanged);
             Automation.RemoveAutomationPropertyChangedEventHandler(_element, OnAutomationPropertyChanged);
         }
         catch
