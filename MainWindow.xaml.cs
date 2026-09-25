@@ -283,24 +283,25 @@ public partial class MainWindow : Window
     {
         var root = AutomationElement.RootElement;
         var currentSessionId = Process.GetCurrentProcess().SessionId;
-        var processIds = Process.GetProcessesByName(identity.ProcessName)
-            .Where(process =>
+        var processIds = new HashSet<int>();
+
+        foreach (var process in Process.GetProcessesByName(identity.ProcessName))
+        {
+            using (process)
             {
                 try
                 {
-                    return process.SessionId == currentSessionId;
+                    if (process.SessionId == currentSessionId)
+                    {
+                        processIds.Add(process.Id);
+                    }
                 }
                 catch
                 {
-                    return false;
+                    // The process may exit while its session is being inspected.
                 }
-                finally
-                {
-                    process.Dispose();
-                }
-            })
-            .Select(process => process.Id)
-            .ToHashSet();
+            }
+        }
 
         if (processIds.Count == 0) return null;
 
