@@ -193,6 +193,15 @@ Manual verification of Restore behavior is still required after pulling this cha
 - This instrumentation is diagnostic only and does not add polling, timers, or application-specific behavior.
 - If the hang reproduces, inspect the final lines of windows-runtime.log before changing UIA architecture.
 
+## Pre-integration Windows runtime verification complete — 2026-09-25
+- The planned pre-integration Windows runtime checks are complete and manually verified.
+- Multi-step element navigation works: Previous/Next switches between distinct UIA targets and starts fresh tracking without leaving stale overlays.
+- Foreground behavior works: guidance/highlight hide when the tracked application moves to the background and return when its host becomes foreground again.
+- Windows validation works in the current test harness: an invalid value blocks Next and the expected value allows progression to the next target.
+- The runtime remained stable during the completed navigation/foreground/validation verification.
+- The earlier AppHangB1 remains documented as an isolated observed hang with no confirmed validation cause. Persistent runtime diagnostics remain enabled so a recurrence can be localized.
+- The Windows runtime is therefore ready for the next integration slice: production-compatible Web -> Windows -> Web handoff using the existing GWTP learner/progress model rather than the local in-memory harness.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
