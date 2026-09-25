@@ -211,6 +211,7 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Closing/replacing the active training state disposes the pending watcher.
 - Manual verification required: author/select two local test targets, make the second target unavailable, navigate from step 1 to step 2, verify that no guidance is shown while waiting, then open the second target's window and verify that highlight/guidance appears automatically.
 - Current scope intentionally validates a target that becomes available because a window opens. Targets materializing dynamically inside an already-open window will require an appropriate lifecycle signal during production integration rather than polling.
+- The pending-target navigation harness is now decoupled from the earlier fixed `GWTP` validation test: Next advances directly to the pending target so window-readiness can be tested independently. The generic UIA value-reading/validation capability remains in the runtime code for later API-driven authored validation rules; production validation must run only when a guide step explicitly defines one.
 
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
