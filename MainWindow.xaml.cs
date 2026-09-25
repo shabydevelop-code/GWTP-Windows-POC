@@ -111,6 +111,7 @@ public partial class MainWindow : Window
         _elementTracker.BoundsChanged += OnTrackedElementBoundsChanged;
         _elementTracker.ElementTemporarilyHidden += OnTrackedElementTemporarilyHidden;
         _elementTracker.ElementUnavailable += OnTrackedElementUnavailable;
+        _elementTracker.DiagnosticEvent += OnTrackingDiagnosticEvent;
         _elementTracker.Start();
     }
 
@@ -134,6 +135,11 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnTrackingDiagnosticEvent(string message)
+    {
+        StatusText.Text = message;
+    }
+
     private void OnTrackedElementUnavailable()
     {
         CloseTrainingOverlay();
@@ -150,6 +156,7 @@ public partial class MainWindow : Window
         _elementTracker.BoundsChanged -= OnTrackedElementBoundsChanged;
         _elementTracker.ElementTemporarilyHidden -= OnTrackedElementTemporarilyHidden;
         _elementTracker.ElementUnavailable -= OnTrackedElementUnavailable;
+        _elementTracker.DiagnosticEvent -= OnTrackingDiagnosticEvent;
         _elementTracker.Dispose();
         _elementTracker = null;
     }
