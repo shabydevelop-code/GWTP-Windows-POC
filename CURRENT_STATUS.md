@@ -86,6 +86,12 @@ Manual verification of Restore behavior is still required after pulling this cha
 - The foreground hook performs no UIA tree scan and no polling.
 - DESTROY and Process.Exited remain terminal lifecycle signals.
 
+## Immediate minimize lifecycle — 2026-09-25
+- Minimize/Restore no longer waits for UIA IsOffscreen propagation.
+- ElementTrackingService listens to process-scoped EVENT_SYSTEM_MINIMIZESTART and EVENT_SYSTEM_MINIMIZEEND.
+- MINIMIZESTART hides guidance/highlight immediately while retaining tracking; MINIMIZEEND immediately refreshes the tracked element and restores overlays when bounds are valid.
+- This remains fully event-driven and adds no timer, polling, or UIA-tree scan.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
