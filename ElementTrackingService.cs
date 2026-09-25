@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Automation;
@@ -294,6 +295,22 @@ internal sealed class ElementTrackingService : IDisposable
         var line = $"{DateTime.Now:HH:mm:ss.fff} {message}";
         Debug.WriteLine($"[GWTP Tracking] {line}");
         DiagnosticEvent?.Invoke(line);
+
+        try
+        {
+            var logDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "GWTP",
+                "Logs");
+            Directory.CreateDirectory(logDirectory);
+            File.AppendAllText(
+                Path.Combine(logDirectory, "windows-tracking.log"),
+                $"{DateTime.Now:yyyy-MM-dd} {line}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Diagnostics must never interfere with runtime tracking.
+        }
     }
 
     private static string GetEventName(uint eventType) => eventType switch
