@@ -109,6 +109,12 @@ Manual verification of Restore behavior is still required after pulling this cha
 - INVOKED is diagnostic only and does not currently change runtime lifecycle state.
 - The goal is to determine whether the visible close action is observable earlier than EVENT_OBJECT_HIDE without polling or application-specific logic.
 
+## Native window-chain diagnostic — 2026-09-25
+- Temporary instrumentation now records the first native HWND associated with the tracked UIA element, its GA_ROOT top-level HWND, any GW_OWNER HWND, and the Win32 class names of root/owner.
+- This is diagnostic only: runtime lifecycle behavior still uses the existing root host HWND.
+- Purpose: verify whether delayed close notification is caused by tracking a framework/host window whose lifecycle differs from the user-visible application window, before considering any heuristic close detection.
+- No polling, timing heuristic, or application-specific rule was introduced.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
