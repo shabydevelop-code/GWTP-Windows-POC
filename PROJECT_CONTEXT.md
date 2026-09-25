@@ -1,7 +1,13 @@
 # GWTP Windows Runtime — Project Context
 
 ## Purpose
-This repository contains the Windows desktop runtime for Generic Web Training Platform (GWTP). Development in this repository must be treated as production development, not disposable proof-of-concept code. The main GWTP repository remains responsible for the API, database, guide authoring, learner identity, and progress.
+This repository contains the Windows desktop runtime for Generic Workplace Training Platform (GWTP). Development in this repository must be treated as production development, not disposable proof-of-concept code. The main GWTP repository remains responsible for the API, database, guide authoring, learner identity, and progress.
+
+## Product naming
+- GWTP = **Generic Workplace Training Platform**.
+- The former expansion **Generic Web Training Platform** is retired because Web is now one supported runtime alongside Windows.
+- Existing technical identifiers using the `GWTP` acronym remain unchanged.
+- User-facing component names may omit the word `Generic`; for example, the browser extension is displayed as **GWTP - Workplace Training Platform**.
 
 ## Technology
 - .NET 8
