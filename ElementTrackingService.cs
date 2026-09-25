@@ -14,6 +14,7 @@ internal sealed class ElementTrackingService : IDisposable
     private IntPtr _locationWinEventHook;
     private IntPtr _destroyWinEventHook;
     private IntPtr _hideWinEventHook;
+    private IntPtr _foregroundWinEventHook;
     private WinEventDelegate? _winEventDelegate;
     private Process? _hostProcess;
     private bool _disposed;
@@ -100,6 +101,15 @@ internal sealed class ElementTrackingService : IDisposable
                 processId,
                 0,
                 WineventOutofcontext | WineventSkipownprocess);
+
+            _foregroundWinEventHook = SetWinEventHook(
+                EventSystemForeground,
+                EventSystemForeground,
+                IntPtr.Zero,
+                _winEventDelegate,
+                0,
+                0,
+                WineventOutofcontext | WineventSkipownprocess);
         }
 
     }
@@ -123,7 +133,7 @@ internal sealed class ElementTrackingService : IDisposable
             return;
         }
 
-        if ((eventType == EventObjectDestroy || eventType == EventObjectHide) &&
+        if (eventType == EventObjectDestroy &&
             hwnd == _hostWindow &&
             objectId == ObjidWindow)
         {
@@ -131,9 +141,48 @@ internal sealed class ElementTrackingService : IDisposable
             return;
         }
 
+        if (eventType == EventObjectHide &&
+            hwnd == _hostWindow &&
+            objectId == ObjidWindow)
+        {
+            _dispatcher.BeginInvoke(EvaluateHostWindowVisibility);
+            return;
+        }
+
+        if (eventType == EventSystemForeground)
+        {
+            _dispatcher.BeginInvoke(EvaluateHostWindowVisibility);
+            return;
+        }
+
         if (eventType == EventObjectLocationChange && (hwnd == _hostWindow || IsChild(_hostWindow, hwnd)))
         {
             _dispatcher.BeginInvoke(RefreshBounds);
+        }
+    }
+
+    private void EvaluateHostWindowVisibility()
+    {
+        if (_disposed || _hostWindow == IntPtr.Zero)
+        {
+            return;
+        }
+
+        if (!IsWindow(_hostWindow))
+        {
+            NotifyUnavailable();
+            return;
+        }
+
+        if (IsIconic(_hostWindow))
+        {
+            ElementTemporarilyHidden?.Invoke();
+            return;
+        }
+
+        if (!IsWindowVisible(_hostWindow))
+        {
+            NotifyUnavailable();
         }
     }
 
@@ -247,9 +296,16 @@ internal sealed class ElementTrackingService : IDisposable
             _hideWinEventHook = IntPtr.Zero;
         }
 
+        if (_foregroundWinEventHook != IntPtr.Zero)
+        {
+            UnhookWinEvent(_foregroundWinEventHook);
+            _foregroundWinEventHook = IntPtr.Zero;
+        }
+
         _winEventDelegate = null;
     }
 
+    private const uint EventSystemForeground = 0x0003;
     private const uint EventObjectDestroy = 0x8001;
     private const uint EventObjectHide = 0x8003;
     private const uint EventObjectLocationChange = 0x800B;
@@ -290,4 +346,16 @@ internal sealed class ElementTrackingService : IDisposable
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool IsChild(IntPtr parentWindow, IntPtr childWindow);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindow(IntPtr windowHandle);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr windowHandle);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsIconic(IntPtr windowHandle);
 }
