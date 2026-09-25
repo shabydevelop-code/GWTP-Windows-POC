@@ -114,13 +114,13 @@ public partial class MainWindow : Window
         _elementTracker.Start();
     }
 
-    private void OnTrackedElementBoundsChanged(Rect bounds)
+    private void OnTrackedElementBoundsChanged(Rect bounds, IReadOnlyCollection<Rect> blockedBounds)
     {
         _highlightWindow ??= new HighlightWindow();
         _highlightWindow.ShowAt(bounds);
 
         _guidanceWindow ??= new GuidanceWindow();
-        _guidanceWindow.ShowNear(bounds);
+        _guidanceWindow.ShowNear(bounds, blockedBounds);
     }
 
     private void OnTrackedElementTemporarilyHidden()
