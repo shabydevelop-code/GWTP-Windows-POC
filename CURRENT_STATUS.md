@@ -1,4 +1,4 @@
-# GWTP Windows POC — Current Status
+# GWTP Windows Runtime — Current Status
 
 Last updated: 2026-09-25
 
@@ -50,10 +50,17 @@ Manual verification of Restore behavior is still required after pulling this cha
 - This reduces unnecessary per-session background work for the intended multi-user/RDS architecture.
 - Minimize/Restore and host-close behavior should be re-verified manually without the fallback timer.
 
+## Production baseline rule — 2026-09-25
+- This repository is now explicitly developed under production assumptions rather than as disposable POC code.
+- New implementation decisions must be generic, maintainable, resource-conscious, secure, reliable, and suitable for RDS/multi-session deployment.
+- Temporary demonstration shortcuts, application-specific hard-coding, and architecture that is expected to be replaced later are not acceptable.
+- Incremental delivery remains preferred, but each increment must fit the intended production architecture.
+- Existing items that are not yet production-ready remain documented below as known limitations and must be resolved rather than normalized as POC behavior.
+
 ## Known limitations / next work
 1. Process rediscovery is not yet scoped to the current Windows SessionId and is therefore not RDS-safe.
 2. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 3. Guidance Previous/Next is still POC UI and is not connected to GWTP.Api learner progress.
 4. A separate step runtime/platform model is required in the main GWTP data/API model; existing TargetType must remain element/none.
 5. Secure learner/token handoff between the browser extension and Windows runtime remains to be designed.
-6. After Windows targeting is hardened, implement the minimal WEB -> WINDOWS -> WEB integration POC.
+6. After Windows targeting is hardened, implement the first production-compatible WEB -> WINDOWS -> WEB integration slice.
