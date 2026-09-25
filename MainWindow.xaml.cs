@@ -143,26 +143,33 @@ public partial class MainWindow : Window
     {
         if (_currentTestStepIndex < 0 || _currentTestStepIndex >= _testSteps.Count - 1) return;
 
+        DiagnosticLog.Write("ValidationNext.Begin");
         var currentIdentity = _testSteps[_currentTestStepIndex];
+        DiagnosticLog.Write("ValidationNext.FindElement.Begin");
         var currentElement = FindElement(currentIdentity);
+        DiagnosticLog.Write("ValidationNext.FindElement.End");
         if (currentElement is null)
         {
             _guidanceWindow?.SetValidationMessage("The current element is no longer available.");
             return;
         }
 
+        DiagnosticLog.Write("ValidationNext.ReadValue.Begin");
         if (!TryReadElementValue(currentElement, out var currentValue))
         {
+            DiagnosticLog.Write("ValidationNext.ReadValue.Unsupported");
             _guidanceWindow?.SetValidationMessage("This control does not expose a readable UI Automation value.");
             return;
         }
 
+        DiagnosticLog.Write("ValidationNext.ReadValue.End");
         if (!string.Equals(currentValue, ValidationTestExpectedValue, StringComparison.Ordinal))
         {
             _guidanceWindow?.SetValidationMessage($"Enter {ValidationTestExpectedValue} before continuing.");
             return;
         }
 
+        DiagnosticLog.Write("ValidationNext.Passed");
         _guidanceWindow?.SetValidationMessage(null);
         _currentTestStepIndex++;
         ShowCurrentTestStep();
@@ -392,6 +399,7 @@ public partial class MainWindow : Window
 
     private static AutomationElement? FindElement(ElementIdentity identity)
     {
+        DiagnosticLog.Write("FindElement.Begin");
         var root = AutomationElement.RootElement;
         var currentSessionId = Process.GetCurrentProcess().SessionId;
         var processIds = new HashSet<int>();
@@ -433,9 +441,11 @@ public partial class MainWindow : Window
                 AutomationElement.NameProperty, identity.Name));
         }
 
+        DiagnosticLog.Write("FindElement.RootFindAll.Begin");
         var candidates = root.FindAll(
             TreeScope.Descendants,
             new AndCondition(conditions.ToArray()));
+        DiagnosticLog.Write("FindElement.RootFindAll.End");
 
         foreach (AutomationElement candidate in candidates)
         {
