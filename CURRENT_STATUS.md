@@ -185,6 +185,14 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Before treating multi-step validation as verified or beginning Web/Windows integration, reproduce the failure and capture the exception/process-exit evidence so the runtime crash path can be fixed.
 - Current validation functionality therefore remains pending manual verification despite the harness implementation.
 
+## Persistent runtime hang diagnostics — 2026-09-25
+- Windows Error Reporting confirmed the observed unexpected disappearance was an AppHangB1 (the runtime stopped responding and was closed), not a normal managed exception crash.
+- Persistent diagnostics are now written to `%LOCALAPPDATA%\GWTP\Logs\windows-runtime.log`.
+- Runtime startup/exit and managed failure channels (WPF DispatcherUnhandledException, AppDomain UnhandledException, and TaskScheduler UnobservedTaskException) are recorded without allowing logging failures to affect runtime behavior.
+- The current validation path records boundaries around target rediscovery and value reading, including the desktop RootElement.FindAll call, so a future hang can be localized by the last completed operation.
+- This instrumentation is diagnostic only and does not add polling, timers, or application-specific behavior.
+- If the hang reproduces, inspect the final lines of windows-runtime.log before changing UIA architecture.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
