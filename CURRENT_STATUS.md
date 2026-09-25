@@ -177,13 +177,13 @@ Manual verification of Restore behavior is still required after pulling this cha
 - If the target does not expose a readable value, the target disappears, or the value does not equal the expected test value, Next remains on the current step and the guidance bubble shows an inline validation message.
 - A successful validation clears the message and advances to the next local test step.
 - This harness deliberately does not persist validation definitions. Production validation engine/expression comes from authored GWTP guide-step data during integration, preserving the existing principle that GWTP validates only explicitly authored learning rules.
-- Manual verification required: choose a writable text control as step 1 plus another target as step 2; confirm Next is blocked until step 1 contains exactly `GWTP`, then confirm it advances.
+- Manual verification completed: with a writable text control as step 1 and another target as step 2, Next remained blocked for a non-matching value and advanced after the value was exactly `GWTP`. The runtime remained stable during the validation test.
 
 ## Runtime stability observation during validation test — 2026-09-25
 - During manual testing of the new Windows validation harness, the GWTP Windows Runtime process exited unexpectedly at an as-yet unidentified point.
 - The cause has not been diagnosed and must not be assumed to be the validation logic without evidence.
 - Before treating multi-step validation as verified or beginning Web/Windows integration, reproduce the failure and capture the exception/process-exit evidence so the runtime crash path can be fixed.
-- Current validation functionality therefore remains pending manual verification despite the harness implementation.
+- The validation harness has since been manually verified and remained stable. The earlier AppHangB1 remains a recorded stability incident rather than a confirmed validation defect; persistent diagnostics remain available if it recurs.
 
 ## Persistent runtime hang diagnostics — 2026-09-25
 - Windows Error Reporting confirmed the observed unexpected disappearance was an AppHangB1 (the runtime stopped responding and was closed), not a normal managed exception crash.
