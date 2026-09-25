@@ -35,10 +35,10 @@ internal static class DiagnosticLog
         try
         {
             var directory = System.IO.Path.GetDirectoryName(PathName);
-            if (directory is not null) Directory.CreateDirectory(directory);
+            if (directory is not null) System.IO.Directory.CreateDirectory(directory);
             var detail = exception is null ? "" : $" | {exception}";
             var line = $"{DateTimeOffset.Now:O} | pid={Environment.ProcessId} | tid={Environment.CurrentManagedThreadId} | {operation}{detail}";
-            lock (Sync) File.AppendAllText(PathName, line + Environment.NewLine);
+            lock (Sync) System.IO.File.AppendAllText(PathName, line + Environment.NewLine);
         }
         catch
         {
