@@ -143,6 +143,15 @@ Manual verification of Restore behavior is still required after pulling this cha
 - This ensures GWTP-owned top-level overlay windows are explicitly closed before the main window completes shutdown, avoiding overlay lifetime extending beyond the initiating window's close sequence.
 - This change is runtime-generic and does not alter host-application close detection or Minimize/Restore behavior.
 
+## Integration/deployment decisions — 2026-09-25
+- The browser Extension remains the learner controller for Web-only, Windows-only, and Hybrid guides; the Windows Runtime will not duplicate guide-selection/start/resume learner UI.
+- Deployment matrix: Web-only = Extension without Windows Runtime; Windows-only = Extension + Windows Runtime; Hybrid = Extension + Windows Runtime.
+- Windows Runtime is optional for GWTP as a whole. A station that is not intended for Windows training can omit it entirely.
+- On Windows-capable stations the Runtime may start with the Windows/RDS session or manually and remain available. With no Windows training target it performs no element tracking and displays no overlays; no additional launcher process or special idle subsystem is planned.
+- Windows application detection and application launch are separate concerns. Guide-level launch configuration must support generic launch mechanisms such as EXE, BAT/script plus arguments/working directory, shortcut, or URI/enterprise launcher.
+- For Windows-only guide start, an existing suitable application instance in the current session should be reused/activated; otherwise the configured application launch mechanism may be invoked.
+- For Hybrid transitions, if the Web workflow already launched the required Windows application, the Runtime should detect/reuse it rather than launch another instance.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
