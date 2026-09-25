@@ -17,6 +17,7 @@ internal sealed class ElementTrackingService : IDisposable
     private IntPtr _hideWinEventHook;
     private IntPtr _foregroundWinEventHook;
     private IntPtr _windowEventHook;
+    private IntPtr _invokeWinEventHook;
     private WinEventDelegate? _winEventDelegate;
     private Process? _hostProcess;
     private bool _disposed;
@@ -123,6 +124,15 @@ internal sealed class ElementTrackingService : IDisposable
                 processId,
                 0,
                 WineventOutofcontext | WineventSkipownprocess);
+
+            _invokeWinEventHook = SetWinEventHook(
+                EventObjectInvoked,
+                EventObjectInvoked,
+                IntPtr.Zero,
+                _winEventDelegate,
+                processId,
+                0,
+                WineventOutofcontext | WineventSkipownprocess);
         }
 
     }
@@ -147,7 +157,7 @@ internal sealed class ElementTrackingService : IDisposable
             return;
         }
 
-        if (hwnd == _hostWindow || eventType == EventSystemForeground)
+        if (hwnd == _hostWindow || eventType == EventSystemForeground || eventType == EventObjectInvoked)
         {
             Trace($"WinEvent: {GetEventName(eventType)} hwnd=0x{hwnd.ToInt64():X} objectId={objectId} childId={childId}");
         }
@@ -321,6 +331,7 @@ internal sealed class ElementTrackingService : IDisposable
         EventObjectDestroy => "EVENT_OBJECT_DESTROY",
         EventObjectHide => "EVENT_OBJECT_HIDE",
         EventObjectLocationChange => "EVENT_OBJECT_LOCATIONCHANGE",
+        EventObjectInvoked => "EVENT_OBJECT_INVOKED",
         _ => $"0x{eventType:X}"
     };
 
@@ -377,6 +388,12 @@ internal sealed class ElementTrackingService : IDisposable
             _windowEventHook = IntPtr.Zero;
         }
 
+        if (_invokeWinEventHook != IntPtr.Zero)
+        {
+            UnhookWinEvent(_invokeWinEventHook);
+            _invokeWinEventHook = IntPtr.Zero;
+        }
+
         _winEventDelegate = null;
     }
 
@@ -386,6 +403,7 @@ internal sealed class ElementTrackingService : IDisposable
     private const uint EventObjectDestroy = 0x8001;
     private const uint EventObjectHide = 0x8003;
     private const uint EventObjectLocationChange = 0x800B;
+    private const uint EventObjectInvoked = 0x8013;
     private const uint WineventOutofcontext = 0x0000;
     private const uint WineventSkipownprocess = 0x0002;
     private const uint GaRoot = 2;
