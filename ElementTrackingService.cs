@@ -181,14 +181,16 @@ internal sealed class ElementTrackingService : IDisposable
             return;
         }
 
-        if (eventType == EventSystemMinimizeStart && hwnd == _hostWindow)
+        if (eventType == EventSystemMinimizeStart && IsHostWindowEvent(hwnd))
         {
+            Trace($"MinimizeStart accepted for hwnd=0x{hwnd.ToInt64():X}");
             _dispatcher.BeginInvoke(() => ElementTemporarilyHidden?.Invoke());
             return;
         }
 
-        if (eventType == EventSystemMinimizeEnd && hwnd == _hostWindow)
+        if (eventType == EventSystemMinimizeEnd && IsHostWindowEvent(hwnd))
         {
+            Trace($"MinimizeEnd accepted for hwnd=0x{hwnd.ToInt64():X}");
             _dispatcher.BeginInvoke(RefreshBounds);
             return;
         }
@@ -203,6 +205,20 @@ internal sealed class ElementTrackingService : IDisposable
         {
             _dispatcher.BeginInvoke(RefreshBounds);
         }
+    }
+
+    private bool IsHostWindowEvent(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero || _hostWindow == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        return hwnd == _hostWindow ||
+               hwnd == _elementWindow ||
+               hwnd == _rootWindow ||
+               (_ownerWindow != IntPtr.Zero && hwnd == _ownerWindow) ||
+               GetAncestor(hwnd, GaRoot) == _rootWindow;
     }
 
     private void EvaluateHostWindowVisibility()
