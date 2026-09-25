@@ -130,12 +130,12 @@ Manual verification of Restore behavior is still required after pulling this cha
 - The temporary native window-chain fields remain in use for generic minimize-event matching; no application-specific rule was introduced.
 - Known limitation: definitive host-window close detection can lag the user's close action when the host application delays HIDE/DESTROY.
 
-## Visibility lifecycle diagnostic — 2026-09-25
-- Temporary, narrowly scoped instrumentation records only visibility/state values already observed by the production tracker: UIA IsOffscreen/BoundingRectangle plus Win32 IsWindow/IsWindowVisible/IsIconic.
-- It runs only when an existing UIA property-change or relevant WinEvent is already delivered; it adds no timer, polling loop, desktop scan, close hook, or application-specific behavior.
-- Diagnostic output is written to `%LOCALAPPDATA%\GWTP\Logs\windows-visibility.log` to compare Minimize and Close behavior in Notepad and Word.
-- Purpose: determine whether an existing visibility signal becomes non-visible early enough to temporarily hide guidance before definitive HIDE/DESTROY.
-- This instrumentation is temporary and must be removed after the comparison.
+## Visibility lifecycle diagnostic result — 2026-09-25
+- Temporary visibility instrumentation was removed after validation.
+- Minimize produces an early, unambiguous non-visible state: IsIconic=True and IsOffscreen=True, followed by EVENT_SYSTEM_MINIMIZESTART.
+- Close testing showed no earlier usable visibility transition: immediately before EVENT_OBJECT_HIDE the host remained IsWindow=True, IsVisible=True, IsIconic=False and the tracked UIA element remained IsOffscreen=False with valid bounds.
+- EVENT_OBJECT_HIDE was the first observed existing signal at which IsWindowVisible became false; GWTP therefore keeps definitive HIDE/DESTROY/Process.Exited close handling rather than introducing a heuristic.
+- No timer, polling, desktop scan, cross-process close-message hook, or application-specific close behavior was added.
 
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
