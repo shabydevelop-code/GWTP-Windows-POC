@@ -117,6 +117,7 @@ public partial class MainWindow : Window
         _elementTracker.BoundsChanged += OnTrackedElementBoundsChanged;
         _elementTracker.ElementTemporarilyHidden += OnTrackedElementTemporarilyHidden;
         _elementTracker.ElementUnavailable += OnTrackedElementUnavailable;
+        _elementTracker.HostActivated += OnTrackedHostActivated;
         _elementTracker.Start();
     }
 
@@ -183,6 +184,11 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnTrackedHostActivated()
+    {
+        // RefreshBounds from the tracker recreates/repositions overlays after activation.
+    }
+
     private void OnTrackedElementUnavailable()
     {
         CloseTrainingOverlay();
@@ -199,6 +205,7 @@ public partial class MainWindow : Window
         _elementTracker.BoundsChanged -= OnTrackedElementBoundsChanged;
         _elementTracker.ElementTemporarilyHidden -= OnTrackedElementTemporarilyHidden;
         _elementTracker.ElementUnavailable -= OnTrackedElementUnavailable;
+        _elementTracker.HostActivated -= OnTrackedHostActivated;
         _elementTracker.Dispose();
         _elementTracker = null;
     }
