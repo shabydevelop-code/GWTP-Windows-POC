@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Automation;
@@ -18,9 +17,7 @@ internal sealed class ElementTrackingService : IDisposable
     private IntPtr _locationWinEventHook;
     private IntPtr _destroyWinEventHook;
     private IntPtr _hideWinEventHook;
-    private IntPtr _foregroundWinEventHook;
     private IntPtr _windowEventHook;
-    private IntPtr _invokeWinEventHook;
     private WinEventDelegate? _winEventDelegate;
     private Process? _hostProcess;
     private bool _disposed;
@@ -28,7 +25,6 @@ internal sealed class ElementTrackingService : IDisposable
     public event Action<Rect>? BoundsChanged;
     public event Action? ElementTemporarilyHidden;
     public event Action? ElementUnavailable;
-    public event Action<string>? DiagnosticEvent;
 
     public ElementTrackingService(AutomationElement element, Dispatcher dispatcher)
     {
@@ -39,7 +35,6 @@ internal sealed class ElementTrackingService : IDisposable
 
     public void Start()
     {
-        Trace("Tracking Start");
         RefreshBounds();
 
         try
@@ -110,16 +105,7 @@ internal sealed class ElementTrackingService : IDisposable
                 0,
                 WineventOutofcontext | WineventSkipownprocess);
 
-            _foregroundWinEventHook = SetWinEventHook(
-                EventSystemForeground,
-                EventSystemForeground,
-                IntPtr.Zero,
-                _winEventDelegate,
-                0,
-                0,
-                WineventOutofcontext | WineventSkipownprocess);
-
-            _windowEventHook = SetWinEventHook(
+                _windowEventHook = SetWinEventHook(
                 EventSystemMinimizeStart,
                 EventSystemMinimizeEnd,
                 IntPtr.Zero,
@@ -128,21 +114,12 @@ internal sealed class ElementTrackingService : IDisposable
                 0,
                 WineventOutofcontext | WineventSkipownprocess);
 
-            _invokeWinEventHook = SetWinEventHook(
-                EventObjectInvoked,
-                EventObjectInvoked,
-                IntPtr.Zero,
-                _winEventDelegate,
-                processId,
-                0,
-                WineventOutofcontext | WineventSkipownprocess);
         }
 
     }
 
     private void OnAutomationPropertyChanged(object sender, AutomationPropertyChangedEventArgs e)
     {
-        Trace($"UIA PropertyChanged: {e.Property.ProgrammaticName}");
         _dispatcher.BeginInvoke(RefreshBounds);
     }
 
@@ -158,11 +135,6 @@ internal sealed class ElementTrackingService : IDisposable
         if (_disposed || hwnd == IntPtr.Zero || _hostWindow == IntPtr.Zero)
         {
             return;
-        }
-
-        if (hwnd == _hostWindow || eventType == EventSystemForeground || eventType == EventObjectInvoked)
-        {
-            Trace($"WinEvent: {GetEventName(eventType)} hwnd=0x{hwnd.ToInt64():X} objectId={objectId} childId={childId}");
         }
 
         if (eventType == EventObjectDestroy &&
@@ -183,21 +155,13 @@ internal sealed class ElementTrackingService : IDisposable
 
         if (eventType == EventSystemMinimizeStart && IsHostWindowEvent(hwnd))
         {
-            Trace($"MinimizeStart accepted for hwnd=0x{hwnd.ToInt64():X}");
             _dispatcher.BeginInvoke(() => ElementTemporarilyHidden?.Invoke());
             return;
         }
 
         if (eventType == EventSystemMinimizeEnd && IsHostWindowEvent(hwnd))
         {
-            Trace($"MinimizeEnd accepted for hwnd=0x{hwnd.ToInt64():X}");
             _dispatcher.BeginInvoke(RefreshBounds);
-            return;
-        }
-
-        if (eventType == EventSystemForeground)
-        {
-            _dispatcher.BeginInvoke(EvaluateHostWindowVisibility);
             return;
         }
 
@@ -223,7 +187,6 @@ internal sealed class ElementTrackingService : IDisposable
 
     private void EvaluateHostWindowVisibility()
     {
-        Trace($"EvaluateHostWindowVisibility: IsWindow={IsWindow(_hostWindow)}, IsIconic={IsIconic(_hostWindow)}, IsVisible={IsWindowVisible(_hostWindow)}");
         if (_disposed || _hostWindow == IntPtr.Zero)
         {
             return;
@@ -267,8 +230,6 @@ internal sealed class ElementTrackingService : IDisposable
             var bounds = _element.Current.BoundingRectangle;
             var isOffscreen = _element.Current.IsOffscreen;
 
-            Trace($"RefreshBounds: IsOffscreen={isOffscreen}, Bounds={bounds}");
-
             if (isOffscreen || bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
             {
                 ElementTemporarilyHidden?.Invoke();
@@ -289,7 +250,6 @@ internal sealed class ElementTrackingService : IDisposable
 
     private void NotifyUnavailable()
     {
-        Trace("ElementUnavailable");
         if (!_disposed)
         {
             ElementUnavailable?.Invoke();
@@ -354,41 +314,6 @@ internal sealed class ElementTrackingService : IDisposable
         return IntPtr.Zero;
     }
 
-    private void Trace(string message)
-    {
-        var line = $"{DateTime.Now:HH:mm:ss.fff} {message}";
-        Debug.WriteLine($"[GWTP Tracking] {line}");
-        DiagnosticEvent?.Invoke(line);
-
-        try
-        {
-            var logDirectory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "GWTP",
-                "Logs");
-            Directory.CreateDirectory(logDirectory);
-            File.AppendAllText(
-                Path.Combine(logDirectory, "windows-tracking.log"),
-                $"{DateTime.Now:yyyy-MM-dd} {line}{Environment.NewLine}");
-        }
-        catch
-        {
-            // Diagnostics must never interfere with runtime tracking.
-        }
-    }
-
-    private static string GetEventName(uint eventType) => eventType switch
-    {
-        EventSystemForeground => "EVENT_SYSTEM_FOREGROUND",
-        EventSystemMinimizeStart => "EVENT_SYSTEM_MINIMIZESTART",
-        EventSystemMinimizeEnd => "EVENT_SYSTEM_MINIMIZEEND",
-        EventObjectDestroy => "EVENT_OBJECT_DESTROY",
-        EventObjectHide => "EVENT_OBJECT_HIDE",
-        EventObjectLocationChange => "EVENT_OBJECT_LOCATIONCHANGE",
-        EventObjectInvoked => "EVENT_OBJECT_INVOKED",
-        _ => $"0x{eventType:X}"
-    };
-
     public void Dispose()
     {
         if (_disposed)
@@ -430,34 +355,20 @@ internal sealed class ElementTrackingService : IDisposable
             _hideWinEventHook = IntPtr.Zero;
         }
 
-        if (_foregroundWinEventHook != IntPtr.Zero)
-        {
-            UnhookWinEvent(_foregroundWinEventHook);
-            _foregroundWinEventHook = IntPtr.Zero;
-        }
-
         if (_windowEventHook != IntPtr.Zero)
         {
             UnhookWinEvent(_windowEventHook);
             _windowEventHook = IntPtr.Zero;
         }
 
-        if (_invokeWinEventHook != IntPtr.Zero)
-        {
-            UnhookWinEvent(_invokeWinEventHook);
-            _invokeWinEventHook = IntPtr.Zero;
-        }
-
         _winEventDelegate = null;
     }
 
-    private const uint EventSystemForeground = 0x0003;
     private const uint EventSystemMinimizeStart = 0x0016;
     private const uint EventSystemMinimizeEnd = 0x0017;
     private const uint EventObjectDestroy = 0x8001;
     private const uint EventObjectHide = 0x8003;
     private const uint EventObjectLocationChange = 0x800B;
-    private const uint EventObjectInvoked = 0x8013;
     private const uint WineventOutofcontext = 0x0000;
     private const uint WineventSkipownprocess = 0x0002;
     private const uint GaRoot = 2;
