@@ -73,6 +73,12 @@ public partial class GuidanceWindow : Window
             SwpNoActivate | SwpShowWindow);
     }
 
+    public void SetValidationMessage(string? message)
+    {
+        ValidationMessage.Text = message ?? string.Empty;
+        ValidationMessage.Visibility = string.IsNullOrWhiteSpace(message) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     public void SetNavigationState(bool canPrevious, bool canNext)
     {
         PreviousButton.IsEnabled = canPrevious;
