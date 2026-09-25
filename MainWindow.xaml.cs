@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private AutomationElement? _hoveredElement;
     private GuidanceWindow? _guidanceWindow;
     private ElementTrackingService? _elementTracker;
+    private PendingWindowTargetWatcher? _pendingTargetWatcher;
 
     public MainWindow()
     {
@@ -82,11 +83,19 @@ public partial class MainWindow : Window
 
             if (element is null)
             {
-                CloseTrainingOverlay();
-                StatusText.Text = "Element is no longer available.";
+                if (_currentTestStepIndex >= 0 && _currentTestStepIndex < _testSteps.Count)
+                {
+                    WaitForCurrentTestStepTarget();
+                }
+                else
+                {
+                    CloseTrainingOverlay();
+                    StatusText.Text = "Element is no longer available.";
+                }
                 return;
             }
 
+            StopPendingTargetWait();
             ShowElement(element);
             StartElementTracking(element);
 
@@ -207,11 +216,54 @@ public partial class MainWindow : Window
     {
         if (_currentTestStepIndex < 0 || _currentTestStepIndex >= _testSteps.Count) return;
 
+        StopPendingTargetWait();
         _selectedIdentity = _testSteps[_currentTestStepIndex];
         _guidanceWindow?.SetValidationMessage(null);
         UpdateTrackedHighlight(showFoundStatus: false);
         UpdateGuidanceNavigationState();
         StatusText.Text = $"Showing test step {_currentTestStepIndex + 1} of {_testSteps.Count}.";
+    }
+
+    private void WaitForCurrentTestStepTarget()
+    {
+        StopElementTracking();
+        CloseHighlight();
+
+        if (_guidanceWindow is not null)
+        {
+            _guidanceWindow.PreviousRequested -= OnPreviousRequested;
+            _guidanceWindow.NextRequested -= OnNextRequested;
+            _guidanceWindow.Close();
+            _guidanceWindow = null;
+        }
+
+        StopPendingTargetWait();
+        _pendingTargetWatcher = new PendingWindowTargetWatcher(Dispatcher, TryResumePendingTarget);
+        _pendingTargetWatcher.Start();
+        StatusText.Text = $"Waiting for the application window for test step {_currentTestStepIndex + 1}.";
+        DiagnosticLog.Write("PendingTarget.Waiting");
+    }
+
+    private void TryResumePendingTarget()
+    {
+        if (_selectedIdentity is null) return;
+
+        DiagnosticLog.Write("PendingTarget.WindowOpened");
+        var element = FindElement(_selectedIdentity);
+        if (element is null) return;
+
+        DiagnosticLog.Write("PendingTarget.Resolved");
+        StopPendingTargetWait();
+        ShowElement(element);
+        StartElementTracking(element);
+        UpdateGuidanceNavigationState();
+        StatusText.Text = $"Showing test step {_currentTestStepIndex + 1} of {_testSteps.Count}.";
+    }
+
+    private void StopPendingTargetWait()
+    {
+        _pendingTargetWatcher?.Dispose();
+        _pendingTargetWatcher = null;
     }
 
     private void UpdateGuidanceNavigationState()
@@ -473,6 +525,7 @@ public partial class MainWindow : Window
 
     private void CloseTrainingOverlay()
     {
+        StopPendingTargetWait();
         StopElementTracking();
         CloseHighlight();
 
