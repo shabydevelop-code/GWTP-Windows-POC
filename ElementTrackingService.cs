@@ -270,7 +270,6 @@ internal sealed class ElementTrackingService : IDisposable
                     _rootWindow = GetAncestor(handle, GaRoot);
                     _ownerWindow = GetWindow(_rootWindow, GwOwner);
                     _hostWindow = _rootWindow;
-                    Trace($"WindowChain: element=0x{_elementWindow.ToInt64():X}, root=0x{_rootWindow.ToInt64():X}, owner=0x{_ownerWindow.ToInt64():X}, rootClass={GetWindowClassName(_rootWindow)}, ownerClass={GetWindowClassName(_ownerWindow)}");
                     return;
                 }
 
@@ -281,7 +280,6 @@ internal sealed class ElementTrackingService : IDisposable
         {
         }
 
-        Trace("WindowChain: no native window handle found");
     }
 
     private static string GetWindowClassName(IntPtr hwnd)
