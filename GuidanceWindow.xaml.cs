@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Input;
 using Forms = System.Windows.Forms;
 
 namespace GWTP_Windows_POC;
@@ -15,6 +16,7 @@ public partial class GuidanceWindow : Window
     private static readonly IntPtr HwndTopmost = new(-1);
 
     private IntPtr _handle;
+    private bool _manualPosition;
 
     public GuidanceWindow()
     {
@@ -24,6 +26,11 @@ public partial class GuidanceWindow : Window
 
     public void ShowNear(Rect targetBounds)
     {
+        if (_manualPosition && IsVisible)
+        {
+            return;
+        }
+
         if (!IsVisible)
         {
             Show();
@@ -61,6 +68,29 @@ public partial class GuidanceWindow : Window
             (int)Math.Round(width),
             (int)Math.Round(height),
             SwpNoActivate | SwpShowWindow);
+    }
+
+    public void ResetManualPosition()
+    {
+        _manualPosition = false;
+    }
+
+    private void DragHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+
+        _manualPosition = true;
+        try
+        {
+            DragMove();
+        }
+        catch (InvalidOperationException)
+        {
+            _manualPosition = false;
+        }
     }
 
     private void GuidanceWindow_SourceInitialized(object? sender, EventArgs e)
