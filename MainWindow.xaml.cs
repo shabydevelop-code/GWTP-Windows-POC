@@ -109,6 +109,7 @@ public partial class MainWindow : Window
 
         _elementTracker = new ElementTrackingService(element, Dispatcher);
         _elementTracker.BoundsChanged += OnTrackedElementBoundsChanged;
+        _elementTracker.ElementTemporarilyHidden += OnTrackedElementTemporarilyHidden;
         _elementTracker.ElementUnavailable += OnTrackedElementUnavailable;
         _elementTracker.Start();
     }
@@ -120,6 +121,17 @@ public partial class MainWindow : Window
 
         _guidanceWindow ??= new GuidanceWindow();
         _guidanceWindow.ShowNear(bounds);
+    }
+
+    private void OnTrackedElementTemporarilyHidden()
+    {
+        CloseHighlight();
+
+        if (_guidanceWindow is not null)
+        {
+            _guidanceWindow.Close();
+            _guidanceWindow = null;
+        }
     }
 
     private void OnTrackedElementUnavailable()
@@ -136,6 +148,7 @@ public partial class MainWindow : Window
         }
 
         _elementTracker.BoundsChanged -= OnTrackedElementBoundsChanged;
+        _elementTracker.ElementTemporarilyHidden -= OnTrackedElementTemporarilyHidden;
         _elementTracker.ElementUnavailable -= OnTrackedElementUnavailable;
         _elementTracker.Dispose();
         _elementTracker = null;
