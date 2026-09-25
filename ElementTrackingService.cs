@@ -16,6 +16,7 @@ internal sealed class ElementTrackingService : IDisposable
     private bool _disposed;
 
     public event Action<Rect>? BoundsChanged;
+    public event Action? ElementTemporarilyHidden;
     public event Action? ElementUnavailable;
 
     public ElementTrackingService(AutomationElement element, Dispatcher dispatcher)
@@ -105,7 +106,7 @@ internal sealed class ElementTrackingService : IDisposable
 
             if (isOffscreen || bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
             {
-                ElementUnavailable?.Invoke();
+                ElementTemporarilyHidden?.Invoke();
                 return;
             }
 
