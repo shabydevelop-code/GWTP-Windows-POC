@@ -1,7 +1,7 @@
-# GWTP Windows POC — Project Context
+# GWTP Windows Runtime — Project Context
 
 ## Purpose
-This repository is the Windows desktop proof of concept for Generic Web Training Platform (GWTP). It validates UI Automation element selection, highlighting, guidance overlays, and runtime tracking for Windows applications. The main GWTP repository remains responsible for the API, database, guide authoring, learner identity, and progress.
+This repository contains the Windows desktop runtime for Generic Web Training Platform (GWTP). Development in this repository must be treated as production development, not disposable proof-of-concept code. The main GWTP repository remains responsible for the API, database, guide authoring, learner identity, and progress.
 
 ## Technology
 - .NET 8
@@ -28,8 +28,15 @@ The API remains the source of truth for learner progress. The browser extension 
 - Closing the target application or losing the UIA element permanently should stop its overlay/tracking.
 - Minimize/offscreen should hide guidance while retaining tracking so Restore can show it again.
 
-## Immediate POC goal
-Validate WEB -> WINDOWS -> WEB using one guide and one GWTP learner/progress state. Before integration, harden Windows tracking, add SessionId-safe process targeting, and define persistence/DTOs for generic Windows targets.
+## Production-development rule
+- Every implementation decision must assume the code is intended to reach production.
+- Do not introduce temporary POC shortcuts, application-specific hard-coding, throwaway architecture, or known scalability/security/reliability debt merely to demonstrate a scenario.
+- Changes must be generic, maintainable, resource-conscious, RDS/multi-session aware, and compatible with the intended Web + Windows architecture.
+- A narrowly scoped incremental implementation is acceptable, but its design must be production-compatible and must not require replacing the architecture later.
+- When a production requirement is not implemented yet, record it explicitly as a known limitation rather than hiding it behind a POC assumption.
+
+## Immediate integration goal
+Implement WEB -> WINDOWS -> WEB using one guide and one GWTP learner/progress state. Before integration, harden Windows tracking, add SessionId-safe process targeting, and define persistence/DTOs for generic Windows targets.
 
 ## Repository workflow
 GitHub main is the source of truth. Inspect current code and these context/status files before substantial changes. Functional or architectural changes must update CURRENT_STATUS.md in the same change set.
