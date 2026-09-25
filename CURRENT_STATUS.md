@@ -161,6 +161,15 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Next verification: select at least two distinct controls in the same application and verify Next/Previous moves highlight/guidance cleanly with no stale overlay or tracking.
 - After navigation is verified, add a similarly scoped Windows validation test before API integration.
 
+## Foreground-aware Windows guidance — 2026-09-25
+- Windows guidance/highlight must not remain Topmost over unrelated foreground applications.
+- ElementTrackingService now listens to EVENT_SYSTEM_FOREGROUND as a desktop-level event while a target is actively tracked.
+- If foreground moves outside the tracked host window chain, guidance/highlight are temporarily hidden while tracking remains alive.
+- When the tracked host window becomes foreground again, the tracker refreshes bounds and the overlays are recreated/repositioned immediately.
+- Foreground loss is explicitly temporary visibility only; it is not interpreted as application close and does not advance/dispose learner tracking.
+- The foreground hook exists only while an element is actively tracked and is removed in Dispose; no polling or desktop UIA scan was added.
+- Re-verify multi-step Previous/Next with the target application moving behind/in front of other applications.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
