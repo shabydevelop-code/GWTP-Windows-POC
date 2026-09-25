@@ -104,6 +104,11 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Logging failures are swallowed so diagnostics cannot interfere with runtime tracking.
 - This is temporary diagnostic instrumentation for isolating delayed host-window close notification and should be reduced/removed after the production lifecycle signal is established.
 
+## Close-action timing instrumentation — 2026-09-25
+- Temporary process-scoped EVENT_OBJECT_INVOKED logging was added to correlate user control invocation with host-window HIDE/DESTROY timing.
+- INVOKED is diagnostic only and does not currently change runtime lifecycle state.
+- The goal is to determine whether the visible close action is observable earlier than EVENT_OBJECT_HIDE without polling or application-specific logic.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
