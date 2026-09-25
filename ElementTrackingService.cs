@@ -23,6 +23,7 @@ internal sealed class ElementTrackingService : IDisposable
     public event Action<Rect>? BoundsChanged;
     public event Action? ElementTemporarilyHidden;
     public event Action? ElementUnavailable;
+    public event Action<string>? DiagnosticEvent;
 
     public ElementTrackingService(AutomationElement element, Dispatcher dispatcher)
     {
@@ -33,6 +34,7 @@ internal sealed class ElementTrackingService : IDisposable
 
     public void Start()
     {
+        Trace("Tracking Start");
         RefreshBounds();
 
         try
@@ -126,6 +128,7 @@ internal sealed class ElementTrackingService : IDisposable
 
     private void OnAutomationPropertyChanged(object sender, AutomationPropertyChangedEventArgs e)
     {
+        Trace($"UIA PropertyChanged: {e.Property.ProgrammaticName}");
         _dispatcher.BeginInvoke(RefreshBounds);
     }
 
@@ -141,6 +144,11 @@ internal sealed class ElementTrackingService : IDisposable
         if (_disposed || hwnd == IntPtr.Zero || _hostWindow == IntPtr.Zero)
         {
             return;
+        }
+
+        if (hwnd == _hostWindow || eventType == EventSystemForeground)
+        {
+            Trace($"WinEvent: {GetEventName(eventType)} hwnd=0x{hwnd.ToInt64():X} objectId={objectId} childId={childId}");
         }
 
         if (eventType == EventObjectDestroy &&
@@ -185,6 +193,7 @@ internal sealed class ElementTrackingService : IDisposable
 
     private void EvaluateHostWindowVisibility()
     {
+        Trace($"EvaluateHostWindowVisibility: IsWindow={IsWindow(_hostWindow)}, IsIconic={IsIconic(_hostWindow)}, IsVisible={IsWindowVisible(_hostWindow)}");
         if (_disposed || _hostWindow == IntPtr.Zero)
         {
             return;
@@ -228,6 +237,8 @@ internal sealed class ElementTrackingService : IDisposable
             var bounds = _element.Current.BoundingRectangle;
             var isOffscreen = _element.Current.IsOffscreen;
 
+            Trace($"RefreshBounds: IsOffscreen={isOffscreen}, Bounds={bounds}");
+
             if (isOffscreen || bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
             {
                 ElementTemporarilyHidden?.Invoke();
@@ -248,6 +259,7 @@ internal sealed class ElementTrackingService : IDisposable
 
     private void NotifyUnavailable()
     {
+        Trace("ElementUnavailable");
         if (!_disposed)
         {
             ElementUnavailable?.Invoke();
@@ -276,6 +288,24 @@ internal sealed class ElementTrackingService : IDisposable
 
         return IntPtr.Zero;
     }
+
+    private void Trace(string message)
+    {
+        var line = $"{DateTime.Now:HH:mm:ss.fff} {message}";
+        Debug.WriteLine($"[GWTP Tracking] {line}");
+        DiagnosticEvent?.Invoke(line);
+    }
+
+    private static string GetEventName(uint eventType) => eventType switch
+    {
+        EventSystemForeground => "EVENT_SYSTEM_FOREGROUND",
+        EventSystemMinimizeStart => "EVENT_SYSTEM_MINIMIZESTART",
+        EventSystemMinimizeEnd => "EVENT_SYSTEM_MINIMIZEEND",
+        EventObjectDestroy => "EVENT_OBJECT_DESTROY",
+        EventObjectHide => "EVENT_OBJECT_HIDE",
+        EventObjectLocationChange => "EVENT_OBJECT_LOCATIONCHANGE",
+        _ => $"0x{eventType:X}"
+    };
 
     public void Dispose()
     {
