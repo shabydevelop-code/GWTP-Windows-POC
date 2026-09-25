@@ -21,6 +21,15 @@ A single guide may alternate between Web and Windows steps. Runtime/platform the
 
 The API remains the source of truth for learner progress. The browser extension renders Web steps and the Windows runtime renders Windows steps. Switching runtime must be automatic and must not require a second learner login.
 
+## Deployment / learner-controller model
+- The browser Extension remains the learner controller for all guide types: Web-only, Windows-only, and Hybrid. It owns learner-facing guide selection/start/resume/navigation rather than duplicating a second learner UI inside the Windows Runtime.
+- Web-only stations require the Extension but do not require the Windows Runtime to be installed or running.
+- Windows-only and Hybrid stations require both the Extension and the Windows Runtime.
+- The Windows Runtime is an optional capability component, not a prerequisite for existing Web-only GWTP operation.
+- On stations that need Windows training, the Windows Runtime may start with the Windows/RDS session or be started manually and remain running. When no Windows target is active it should have no element tracking or guidance overlays; no separate launcher process or special polling-based idle subsystem is required.
+- A Windows-only guide may define guide-level application detection and launch configuration so the runtime can reuse an existing application instance or launch it when absent. Launch configuration must be generic enough for EXE, BAT/script with environment arguments, shortcut, or URI/launcher scenarios; application detection is separate from the launch mechanism.
+- Hybrid guides must not relaunch a Windows application when the preceding Web workflow already opened an appropriate instance in the same Windows session.
+
 ## Runtime principles
 - Prefer event/state-driven tracking and readiness.
 - Do not use arbitrary delays or aggressive polling as the mechanism that makes runtime behavior work.
