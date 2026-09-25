@@ -29,7 +29,11 @@ public partial class MainWindow : Window
         _selectionTimer.Tick += SelectionTimer_Tick;
 
         SourceInitialized += (_, _) => _windowHandle = new WindowInteropHelper(this).Handle;
-        Closed += (_, _) => CloseTrainingOverlay();
+        Closing += (_, _) =>
+        {
+            _selectionTimer.Stop();
+            CloseTrainingOverlay();
+        };
     }
 
     private void SelectElementButton_Click(object sender, RoutedEventArgs e)
