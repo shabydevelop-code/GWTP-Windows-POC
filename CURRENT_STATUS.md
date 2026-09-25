@@ -23,6 +23,15 @@ The tracker now distinguishes temporary invisibility from true element unavailab
 
 Manual verification of Restore behavior is still required after pulling this change.
 
+## Transient UI collision handling — 2026-09-25
+- Added an event-driven first pass for transient menu UI.
+- ElementTrackingService listens to UIA MenuOpened/MenuClosed events and collects visible Menu bounds belonging to the tracked target process.
+- Guidance placement now evaluates below/above/right/left candidates and rejects positions that intersect visible transient UI.
+- If no safe candidate exists, the guidance window is hidden temporarily; tracking remains active and the next menu/target event can restore it.
+- This is intentionally generic at the target-process/UIA level and contains no Notepad-specific rule.
+- The target highlight remains visible; only guidance placement reacts to transient UI collision.
+- Manual verification is required with Notepad View and additional popup/dropdown/dialog cases before broadening the transient-control detection set.
+
 ## Known limitations / next work
 1. Process rediscovery is not yet scoped to the current Windows SessionId and is therefore not RDS-safe.
 2. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
