@@ -115,6 +115,12 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Purpose: verify whether delayed close notification is caused by tracking a framework/host window whose lifecycle differs from the user-visible application window, before considering any heuristic close detection.
 - No polling, timing heuristic, or application-specific rule was introduced.
 
+## Minimize event window-chain fix — 2026-09-25
+- MINIMIZESTART/MINIMIZEEND are no longer accepted only when the event HWND exactly equals the stored root host HWND.
+- The runtime now accepts minimize lifecycle events when the HWND belongs to the tracked native window chain (element/root/owner or resolves to the same GA_ROOT).
+- This fixes frameworks where minimize events are emitted for a related native HWND rather than the exact UIA-derived root HWND.
+- Matching remains HWND-based and event-driven; no polling, delay, or application-specific rule was added.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
