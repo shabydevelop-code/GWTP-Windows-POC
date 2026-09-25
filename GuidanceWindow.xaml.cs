@@ -23,9 +23,6 @@ public partial class GuidanceWindow : Window
     }
 
     public void ShowNear(Rect targetBounds)
-        => ShowNear(targetBounds, Array.Empty<Rect>());
-
-    public void ShowNear(Rect targetBounds, IReadOnlyCollection<Rect> blockedBounds)
     {
         if (!IsVisible)
         {
@@ -48,54 +45,23 @@ public partial class GuidanceWindow : Window
         var height = Math.Max(ActualHeight, 130);
         const int gap = 12;
 
-        var centeredX = targetBounds.Left + ((targetBounds.Width - width) / 2);
-        var centeredY = targetBounds.Top + ((targetBounds.Height - height) / 2);
+        var x = targetBounds.Left + ((targetBounds.Width - width) / 2);
+        var yBelow = targetBounds.Bottom + gap;
+        var yAbove = targetBounds.Top - height - gap;
+        var y = yBelow + height <= workArea.Bottom ? yBelow : yAbove;
 
-        var candidates = new[]
-        {
-            new Rect(centeredX, targetBounds.Bottom + gap, width, height),
-            new Rect(centeredX, targetBounds.Top - height - gap, width, height),
-            new Rect(targetBounds.Right + gap, centeredY, width, height),
-            new Rect(targetBounds.Left - width - gap, centeredY, width, height)
-        };
+        x = Math.Max(workArea.Left + gap, Math.Min(x, workArea.Right - width - gap));
+        y = Math.Max(workArea.Top + gap, Math.Min(y, workArea.Bottom - height - gap));
 
-        Rect? selected = null;
-        foreach (var candidate in candidates)
-        {
-            var clamped = ClampToWorkArea(candidate, workArea, gap);
-            if (!IntersectsAny(clamped, blockedBounds))
-            {
-                selected = clamped;
-                break;
-            }
-        }
-
-        if (selected is null)
-        {
-            Hide();
-            return;
-        }
-
-        var placement = selected.Value;
         SetWindowPos(
             _handle,
             HwndTopmost,
-            (int)Math.Round(placement.Left),
-            (int)Math.Round(placement.Top),
-            (int)Math.Round(placement.Width),
-            (int)Math.Round(placement.Height),
+            (int)Math.Round(x),
+            (int)Math.Round(y),
+            (int)Math.Round(width),
+            (int)Math.Round(height),
             SwpNoActivate | SwpShowWindow);
     }
-
-    private static Rect ClampToWorkArea(Rect candidate, System.Drawing.Rectangle workArea, int gap)
-    {
-        var x = Math.Max(workArea.Left + gap, Math.Min(candidate.Left, workArea.Right - candidate.Width - gap));
-        var y = Math.Max(workArea.Top + gap, Math.Min(candidate.Top, workArea.Bottom - candidate.Height - gap));
-        return new Rect(x, y, candidate.Width, candidate.Height);
-    }
-
-    private static bool IntersectsAny(Rect candidate, IEnumerable<Rect> blockedBounds)
-        => blockedBounds.Any(blocked => !blocked.IsEmpty && candidate.IntersectsWith(blocked));
 
     private void GuidanceWindow_SourceInitialized(object? sender, EventArgs e)
     {
