@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Automation;
@@ -25,6 +26,7 @@ internal sealed class ElementTrackingService : IDisposable
     public event Action<Rect>? BoundsChanged;
     public event Action? ElementTemporarilyHidden;
     public event Action? ElementUnavailable;
+    public event Action<string>? VisibilityDiagnostic;
 
     public ElementTrackingService(AutomationElement element, Dispatcher dispatcher)
     {
@@ -120,7 +122,11 @@ internal sealed class ElementTrackingService : IDisposable
 
     private void OnAutomationPropertyChanged(object sender, AutomationPropertyChangedEventArgs e)
     {
-        _dispatcher.BeginInvoke(RefreshBounds);
+        _dispatcher.BeginInvoke(() =>
+        {
+            LogVisibilityState($"UIA {e.Property.ProgrammaticName}");
+            RefreshBounds();
+        });
     }
 
     private void OnWinEvent(
@@ -149,13 +155,21 @@ internal sealed class ElementTrackingService : IDisposable
             hwnd == _hostWindow &&
             objectId == ObjidWindow)
         {
-            _dispatcher.BeginInvoke(EvaluateHostWindowVisibility);
+            _dispatcher.BeginInvoke(() =>
+            {
+                LogVisibilityState("EVENT_OBJECT_HIDE");
+                EvaluateHostWindowVisibility();
+            });
             return;
         }
 
         if (eventType == EventSystemMinimizeStart && IsHostWindowEvent(hwnd))
         {
-            _dispatcher.BeginInvoke(() => ElementTemporarilyHidden?.Invoke());
+            _dispatcher.BeginInvoke(() =>
+            {
+                LogVisibilityState("EVENT_SYSTEM_MINIMIZESTART");
+                ElementTemporarilyHidden?.Invoke();
+            });
             return;
         }
 
@@ -167,7 +181,11 @@ internal sealed class ElementTrackingService : IDisposable
 
         if (eventType == EventObjectLocationChange && (hwnd == _hostWindow || IsChild(_hostWindow, hwnd)))
         {
-            _dispatcher.BeginInvoke(RefreshBounds);
+            _dispatcher.BeginInvoke(() =>
+            {
+                LogVisibilityState("EVENT_OBJECT_LOCATIONCHANGE");
+                RefreshBounds();
+            });
         }
     }
 
@@ -245,6 +263,46 @@ internal sealed class ElementTrackingService : IDisposable
         catch
         {
             NotifyUnavailable();
+        }
+    }
+
+    private void LogVisibilityState(string source)
+    {
+        if (_disposed) return;
+
+        try
+        {
+            var isWindow = _hostWindow != IntPtr.Zero && IsWindow(_hostWindow);
+            var isVisible = isWindow && IsWindowVisible(_hostWindow);
+            var isIconic = isWindow && IsIconic(_hostWindow);
+
+            bool? isOffscreen = null;
+            Rect bounds = Rect.Empty;
+            try
+            {
+                isOffscreen = _element.Current.IsOffscreen;
+                bounds = _element.Current.BoundingRectangle;
+            }
+            catch (ElementNotAvailableException)
+            {
+            }
+
+            var line = $"{DateTime.Now:HH:mm:ss.fff} {source} | IsWindow={isWindow} IsVisible={isVisible} IsIconic={isIconic} IsOffscreen={isOffscreen?.ToString() ?? "<unavailable>"} Bounds={bounds}";
+            Debug.WriteLine($"[GWTP Visibility] {line}");
+            VisibilityDiagnostic?.Invoke(line);
+
+            var logDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "GWTP",
+                "Logs");
+            Directory.CreateDirectory(logDirectory);
+            File.AppendAllText(
+                Path.Combine(logDirectory, "windows-visibility.log"),
+                $"{DateTime.Now:yyyy-MM-dd} {line}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Diagnostics must never affect runtime tracking.
         }
     }
 
