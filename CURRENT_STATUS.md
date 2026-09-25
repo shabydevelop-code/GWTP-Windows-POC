@@ -57,6 +57,14 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Incremental delivery remains preferred, but each increment must fit the intended production architecture.
 - Existing items that are not yet production-ready remain documented below as known limitations and must be resolved rather than normalized as POC behavior.
 
+## Host application lifecycle tracking — 2026-09-25
+- Closing the tracked host application is now handled explicitly and event-driven; it no longer depends on periodic health polling.
+- ElementTrackingService resolves the host window process once at Start(), subscribes to Process.Exited, and installs a process-scoped EVENT_OBJECT_DESTROY WinEvent hook in addition to the existing location-change hook.
+- Destruction of the tracked host window or exit of its process raises ElementUnavailable so MainWindow removes the highlight/guidance and disposes tracking.
+- WinEvent hooks are scoped to the host process to reduce unrelated desktop events and background work.
+- Dispose unsubscribes Process.Exited, disposes the Process object, and unhooks both WinEvent hooks.
+- This is production-oriented lifecycle handling and preserves the event-only/no-polling rule.
+
 ## Known limitations / next work
 1. Process rediscovery is not yet scoped to the current Windows SessionId and is therefore not RDS-safe.
 2. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
