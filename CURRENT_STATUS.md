@@ -121,6 +121,15 @@ Manual verification of Restore behavior is still required after pulling this cha
 - This fixes frameworks where minimize events are emitted for a related native HWND rather than the exact UIA-derived root HWND.
 - Matching remains HWND-based and event-driven; no polling, delay, or application-specific rule was added.
 
+## Host close lifecycle decision — 2026-09-25
+- Diagnostics across Notepad and Microsoft Word confirmed that GWTP reacts to EVENT_OBJECT_HIDE/DESTROY within milliseconds, while applications may delay those definitive lifecycle events by several seconds after the visible close action.
+- Production runtime continues to use definitive HIDE/DESTROY/Process.Exited lifecycle signals rather than inferring closure from focus loss, movement, animation, or other heuristics.
+- WM_CLOSE interception through cross-process message hooks was not adopted: it would add injection/bitness/deployment complexity and represents a close request that applications may cancel or defer.
+- Minimize remains event-driven through EVENT_SYSTEM_MINIMIZESTART/MINIMIZEEND and window-chain matching, preserving immediate hide/restore behavior.
+- Temporary timestamp logging, user-visible diagnostic output, foreground diagnostic hook, and EVENT_OBJECT_INVOKED diagnostic hook have been removed.
+- The temporary native window-chain fields remain in use for generic minimize-event matching; no application-specific rule was introduced.
+- Known limitation: definitive host-window close detection can lag the user's close action when the host application delays HIDE/DESTROY.
+
 ## Known limitations / next work
 1. Name + AutomationId + ControlType can still be ambiguous; robust hierarchy/fallback identity is not implemented.
 2. Guidance Previous/Next is not yet connected to GWTP.Api learner progress.
