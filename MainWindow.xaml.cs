@@ -16,6 +16,8 @@ public partial class MainWindow : Window
     private bool _mouseWasDown;
     private IntPtr _windowHandle;
     private ElementIdentity? _selectedIdentity;
+    private readonly List<ElementIdentity> _testSteps = new();
+    private int _currentTestStepIndex = -1;
     private HighlightWindow? _highlightWindow;
     private AutomationElement? _hoveredElement;
     private GuidanceWindow? _guidanceWindow;
@@ -109,7 +111,7 @@ public partial class MainWindow : Window
         StopElementTracking();
 
         _highlightWindow ??= new HighlightWindow();
-        _guidanceWindow ??= new GuidanceWindow();
+        EnsureGuidanceWindow();
 
         _elementTracker = new ElementTrackingService(element, Dispatcher);
         _elementTracker.BoundsChanged += OnTrackedElementBoundsChanged;
@@ -118,13 +120,54 @@ public partial class MainWindow : Window
         _elementTracker.Start();
     }
 
+    private void EnsureGuidanceWindow()
+    {
+        if (_guidanceWindow is not null) return;
+
+        _guidanceWindow = new GuidanceWindow();
+        _guidanceWindow.PreviousRequested += OnPreviousRequested;
+        _guidanceWindow.NextRequested += OnNextRequested;
+        UpdateGuidanceNavigationState();
+    }
+
+    private void OnPreviousRequested()
+    {
+        if (_currentTestStepIndex <= 0) return;
+        _currentTestStepIndex--;
+        ShowCurrentTestStep();
+    }
+
+    private void OnNextRequested()
+    {
+        if (_currentTestStepIndex < 0 || _currentTestStepIndex >= _testSteps.Count - 1) return;
+        _currentTestStepIndex++;
+        ShowCurrentTestStep();
+    }
+
+    private void ShowCurrentTestStep()
+    {
+        if (_currentTestStepIndex < 0 || _currentTestStepIndex >= _testSteps.Count) return;
+
+        _selectedIdentity = _testSteps[_currentTestStepIndex];
+        UpdateTrackedHighlight(showFoundStatus: false);
+        UpdateGuidanceNavigationState();
+        StatusText.Text = $"Showing test step {_currentTestStepIndex + 1} of {_testSteps.Count}.";
+    }
+
+    private void UpdateGuidanceNavigationState()
+    {
+        _guidanceWindow?.SetNavigationState(
+            _currentTestStepIndex > 0,
+            _currentTestStepIndex >= 0 && _currentTestStepIndex < _testSteps.Count - 1);
+    }
+
     private void OnTrackedElementBoundsChanged(Rect bounds)
     {
         _highlightWindow ??= new HighlightWindow();
         _highlightWindow.ShowAt(bounds);
 
-        _guidanceWindow ??= new GuidanceWindow();
-        _guidanceWindow.ShowNear(bounds);
+        EnsureGuidanceWindow();
+        _guidanceWindow!.ShowNear(bounds);
     }
 
     private void OnTrackedElementTemporarilyHidden()
@@ -133,6 +176,8 @@ public partial class MainWindow : Window
 
         if (_guidanceWindow is not null)
         {
+            _guidanceWindow.PreviousRequested -= OnPreviousRequested;
+            _guidanceWindow.NextRequested -= OnNextRequested;
             _guidanceWindow.Close();
             _guidanceWindow = null;
         }
@@ -259,9 +304,12 @@ public partial class MainWindow : Window
             }
 
             _selectedIdentity = CreateIdentity(element);
+            _testSteps.Add(_selectedIdentity);
+            _currentTestStepIndex = _testSteps.Count - 1;
             _hoveredElement = null;
             ShowElement(element);
-            StopSelection("Element selected.");
+            StopSelection($"Element selected as test step {_testSteps.Count}.");
+            ShowCurrentTestStep();
         }
         catch (ElementNotAvailableException)
         {
