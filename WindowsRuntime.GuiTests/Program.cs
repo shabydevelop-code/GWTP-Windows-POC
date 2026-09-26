@@ -200,9 +200,12 @@ internal static class Program
         var x = (int)Math.Round(rect.Left + rect.Width / 2);
         var y = (int)Math.Round(rect.Top + rect.Height / 2);
         SetCursorPos(x, y);
+        var hostHwnd = GetAncestorWindowFromElement(target);
+        Require(hostHwnd != IntPtr.Zero, "Could not resolve target host window.");
+        SetForegroundWindow(hostHwnd);
 
-        // Let the production picker observe the cursor over the external target while
-        // the mouse is still up. This establishes the same Up -> Down edge as a user.
+        // This delay is only test synchronization for the production picker's existing
+        // 40 ms sampling loop; foreground is now made explicit rather than inferred.
         Thread.Sleep(120);
         mouse_event(MouseeventfLeftdown, 0, 0, 0, UIntPtr.Zero);
         Thread.Sleep(120);
@@ -261,6 +264,22 @@ internal static class Program
 
     private static void AssertOverlayAttached(int runtimeProcessId, AutomationElement target)
         => Require(IsOverlayAttached(runtimeProcessId, target), "Highlight/guidance are not attached to the selected target.");
+
+    private static IntPtr GetAncestorWindowFromElement(AutomationElement element)
+    {
+        try
+        {
+            var current = element;
+            while (current is not null)
+            {
+                var hwnd = new IntPtr(current.Current.NativeWindowHandle);
+                if (hwnd != IntPtr.Zero) return GetAncestor(hwnd, GaRoot);
+                current = TreeWalker.ControlViewWalker.GetParent(current);
+            }
+        }
+        catch (ElementNotAvailableException) { }
+        return IntPtr.Zero;
+    }
 
     private static void MoveWindow(AutomationElement window, int dx, int dy)
     {
@@ -376,9 +395,13 @@ internal static class Program
     private const uint SwpNozorder = 0x0004;
     private const uint SwpNoactivate = 0x0010;
     private const uint WmClose = 0x0010;
+    private const uint GaRoot = 2;
 
     [DllImport("user32.dll")]
     private static extern bool SetCursorPos(int x, int y);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
 
     [DllImport("user32.dll")]
     private static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extraInfo);
