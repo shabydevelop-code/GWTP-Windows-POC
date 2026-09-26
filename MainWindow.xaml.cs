@@ -26,6 +26,10 @@ public partial class MainWindow : Window
     private ElementTrackingService? _elementTracker;
     private PendingWindowTargetWatcher? _pendingTargetWatcher;
     private ElementIdentity? _pendingTargetIdentity;
+    private bool _authoringSelection;
+
+    public event Action<WindowsTargetDescriptor>? AuthoringTargetSelected;
+    public event Action? AuthoringSelectionCancelled;
 
     public MainWindow()
     {
@@ -42,11 +46,34 @@ public partial class MainWindow : Window
         };
     }
 
+    public void BeginAuthoringSelection()
+    {
+        if (_isSelecting) return;
+        _authoringSelection = true;
+        CloseTrainingOverlay();
+        _hoveredElement = null;
+        _isSelecting = true;
+        _mouseWasDown = IsLeftMouseButtonDown();
+        SelectElementButton.Content = "Cancel";
+        FindElementButton.IsEnabled = false;
+        StatusText.Text = "Move to the target application and left-click the control.";
+        _selectionTimer.Start();
+    }
+
+    public void CancelAuthoringSelection()
+    {
+        if (!_isSelecting || !_authoringSelection) return;
+        _authoringSelection = false;
+        StopSelection("Selection cancelled.");
+        AuthoringSelectionCancelled?.Invoke();
+    }
+
     private void SelectElementButton_Click(object sender, RoutedEventArgs e)
     {
         if (_isSelecting)
         {
-            StopSelection("Selection cancelled.");
+            if (_authoringSelection) CancelAuthoringSelection();
+            else StopSelection("Selection cancelled.");
             return;
         }
 
@@ -511,6 +538,17 @@ public partial class MainWindow : Window
             DiagnosticLog.Write(
                 $"Picker.Captured name='{element.Current.Name}' automationId='{element.Current.AutomationId}' " +
                 $"controlType='{element.Current.ControlType?.ProgrammaticName}' processId={element.Current.ProcessId}");
+            if (_authoringSelection)
+            {
+                var descriptor = WindowsTargetDescriptorFactory.Create(element);
+                _authoringSelection = false;
+                _hoveredElement = null;
+                ShowElement(element);
+                StopSelection("Windows target selected.");
+                AuthoringTargetSelected?.Invoke(descriptor);
+                return;
+            }
+
             _selectedIdentity = CreateIdentity(element);
             _testSteps.Add(_selectedIdentity);
             _currentTestStepIndex = _testSteps.Count - 1;
