@@ -243,10 +243,11 @@ public partial class MainWindow : Window
         }
 
         StopPendingTargetWait();
-        _pendingTargetIdentity = _selectedIdentity;
+        var pendingIdentity = _selectedIdentity;
+        _pendingTargetIdentity = pendingIdentity;
         _pendingTargetWatcher = new PendingWindowTargetWatcher(
             Dispatcher,
-            () => TryResumePendingTarget(_pendingTargetIdentity));
+            () => TryResumePendingTarget(pendingIdentity));
         _pendingTargetWatcher.Start();
         StatusText.Text = $"Waiting for the application window for test step {_currentTestStepIndex + 1}.";
         DiagnosticLog.Write("PendingTarget.Waiting");
