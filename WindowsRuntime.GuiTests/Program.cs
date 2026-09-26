@@ -268,11 +268,22 @@ internal static class Program
                     // UIA Control View. Resolve the duplicate leafs from the host,
                     // then identify the authored one by its screen geometry relative
                     // to Group A. Bring it into view before the physical picker.
+                    // The host's ScrollViewer can clip T01 completely after later
+                    // scenarios have scrolled down. Scroll the known Group A container
+                    // itself into view first; a clipped child can report Empty bounds
+                    // and therefore cannot be identified geometrically yet.
+                    if (groupA.TryGetCurrentPattern(ScrollItemPattern.Pattern, out var groupScrollPattern) &&
+                        groupScrollPattern is ScrollItemPattern groupScrollItem)
+                    {
+                        groupScrollItem.ScrollIntoView();
+                    }
+
                     var groupRect = groupA.Current.BoundingRectangle;
                     authored = FindAllByAutomationId(hostWindow, "SharedContinue")
                         .FirstOrDefault(candidate =>
                         {
                             var rect = candidate.Current.BoundingRectangle;
+                            if (rect.IsEmpty || rect.Width <= 0 || rect.Height <= 0) return false;
                             var centerX = rect.Left + rect.Width / 2;
                             return centerX >= groupRect.Left && centerX <= groupRect.Right;
                         });
