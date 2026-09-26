@@ -254,3 +254,12 @@ Manual verification of Restore behavior is still required after pulling this cha
 - UIA property-handler removal now runs off the WPF Dispatcher. Tracker Dispose marks the tracker disposed first, so any late UIA callback cannot mutate active runtime state; GWTP-owned process/WinEvent resources continue to be detached synchronously and immediately.
 - This targets the measured blocking boundary rather than inferring application closure or adding polling/timeouts.
 - Manual verification required: close Notepad while guidance is active and verify the GWTP window remains responsive and the guidance/highlight are removed immediately when unavailable notification is received, even if the background UIA unsubscription itself still takes several seconds.
+
+## Host-shutdown fix manually verified — 2026-09-26
+- Manual verification passed after moving UIA property-handler removal off the WPF UI thread.
+- Verified sequence: active target tracking -> Minimize -> Restore -> Close.
+- Minimize/Restore continues to preserve and restore guidance correctly.
+- Closing Notepad now removes guidance/highlight promptly and the GWTP window remains responsive throughout shutdown.
+- The earlier apparent several-second host-close lifecycle limitation was therefore caused, in the reproduced case, by synchronous `Automation.RemoveAutomationPropertyChangedEventHandler` blocking the WPF Dispatcher during tracker disposal rather than by a late definitive close signal.
+- The previous host-close delay should no longer be treated as an active known limitation for the verified scenario. Persistent diagnostics remain available for future provider-specific stalls.
+- The POC selection flow intentionally shows guidance immediately after selecting a UIA element because selection also creates/activates an in-memory test step. This is a test-harness behavior only. In production, Editor target selection will capture/store the Windows target descriptor; guidance is rendered only by Preview or Learner execution.
