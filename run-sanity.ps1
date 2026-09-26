@@ -1,3 +1,7 @@
+param(
+    [int[]]$Test
+)
+
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
@@ -15,5 +19,11 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
 Write-Host "Running Windows GUI sanity..."
-dotnet run --no-build --project (Join-Path $root "WindowsRuntime.GuiTests\WindowsRuntime.GuiTests.csproj")
+$runnerArgs = @()
+if ($Test) {
+    $runnerArgs = @("--") + (($Test -join ","))
+    Write-Host "Selected test(s): $($Test -join ', ')"
+}
+
+dotnet run --no-build --project (Join-Path $root "WindowsRuntime.GuiTests\WindowsRuntime.GuiTests.csproj") @runnerArgs
 exit $LASTEXITCODE
