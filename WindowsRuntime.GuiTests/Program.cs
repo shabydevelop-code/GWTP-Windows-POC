@@ -32,7 +32,7 @@ internal static class Program
         try
         {
             var runtimeWindow = WaitForWindow(runtime.Id, "GWTP Windows POC");
-            Run("Open UIA Test Host through GUI", () =>
+            Run("01. Open UIA Test Host through GUI", () =>
             {
                 Invoke(FindByName(runtimeWindow, "Open Ambiguity Test"));
                 WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
@@ -41,7 +41,7 @@ internal static class Program
             var hostWindow = WaitForTopLevelWindow("GWTP Windows UIA Test Host");
             ArrangeWindowsForPicker(runtimeWindow, hostWindow);
 
-            Run("T01 picker selects duplicate target A and shows attached overlays", () =>
+            Run("02. T01 picker selects duplicate target A and shows attached overlays", () =>
             {
                 var targets = FindAllByAutomationId(hostWindow, "SharedContinue");
                 Require(targets.Count == 2, "Expected two duplicate Continue targets.");
@@ -51,7 +51,7 @@ internal static class Program
                 AssertOverlayAttached(runtime.Id, targets[0]);
             });
 
-            Run("T01 picker selects duplicate target B and Previous/Next rediscover correct ancestors", () =>
+            Run("03. T01 picker selects duplicate target B and Previous/Next rediscover correct ancestors", () =>
             {
                 var targets = FindAllByAutomationId(hostWindow, "SharedContinue");
                 SelectThroughRealPicker(runtimeWindow, targets[1]);
@@ -65,7 +65,7 @@ internal static class Program
                 WaitUntil(() => IsOverlayAttached(runtime.Id, targets[1]), "Next did not return to Group B target.");
             });
 
-            Run("Tracking follows target when host window moves", () =>
+            Run("04. Tracking follows target when host window moves", () =>
             {
                 var target = FindAllByAutomationId(hostWindow, "SharedContinue")[1];
                 var before = WaitForRuntimeWindow(runtime.Id, "GWTP Guidance").Current.BoundingRectangle;
@@ -77,7 +77,7 @@ internal static class Program
                 }, "Guidance did not follow the moved target.");
             });
 
-            Run("Minimize hides overlays and Restore reattaches them", () =>
+            Run("05. Minimize hides overlays and Restore reattaches them", () =>
             {
                 var target = FindAllByAutomationId(hostWindow, "SharedContinue")[1];
                 var hwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
@@ -91,7 +91,7 @@ internal static class Program
                     "Overlays did not reattach after Restore.");
             });
 
-            Run("Stress Previous/Next with repeated Minimize/Restore stays attached", () =>
+            Run("06. Stress Previous/Next with repeated Minimize/Restore stays attached", () =>
             {
                 var targets = FindAllByAutomationId(hostWindow, "SharedContinue");
                 Require(targets.Count == 2, "Expected two SharedContinue targets for stress test.");
@@ -121,7 +121,7 @@ internal static class Program
                 }
             });
 
-            Run("Foreground loss hides overlays and returning to host restores them", () =>
+            Run("07. Foreground loss hides overlays and returning to host restores them", () =>
             {
                 var target = FindAllByAutomationId(hostWindow, "SharedContinue")[1];
                 var runtimeHwnd = new IntPtr(runtimeWindow.Current.NativeWindowHandle);
@@ -138,13 +138,13 @@ internal static class Program
                     "Guidance did not return when host regained foreground.");
             });
 
-            Run("T02 TextBox with AutomationId is exposed through UIA", () =>
+            Run("08. T02 TextBox with AutomationId is exposed through UIA", () =>
             {
                 var target = FindByAutomationId(hostWindow, "StableTextBox");
                 Require(target.Current.ControlType == ControlType.Edit, "StableTextBox is not exposed as Edit.");
             });
 
-            Run("T03 TextBox without authored AutomationId remains selectable in GUI", () =>
+            Run("09. T03 TextBox without authored AutomationId remains selectable in GUI", () =>
             {
                 var edits = hostWindow.FindAll(
                     TreeScope.Descendants,
@@ -159,13 +159,13 @@ internal static class Program
                 Require(target.Current.ControlType == ControlType.Edit, "No-id textbox is not exposed as Edit.");
             });
 
-            Run("T04 Button without authored AutomationId remains selectable in GUI", () =>
+            Run("10. T04 Button without authored AutomationId remains selectable in GUI", () =>
             {
                 var target = FindByName(hostWindow, "No AutomationId Button");
                 Require(target.Current.ControlType == ControlType.Button, "No-id button is not exposed as Button.");
             });
 
-            Run("T05 Dynamic Name changes through GUI", () =>
+            Run("11. T05 Dynamic Name changes through GUI", () =>
             {
                 Invoke(FindByName(hostWindow, "Change target name"));
                 WaitUntil(() => TryFindByName(hostWindow, "Dynamic target 2") is not null,
@@ -174,13 +174,13 @@ internal static class Program
                     "Stable AutomationId no longer resolves the renamed target.");
             });
 
-            Run("T06 Deep hierarchy target is exposed through UIA", () =>
+            Run("12. T06 Deep hierarchy target is exposed through UIA", () =>
             {
                 var target = FindByAutomationId(hostWindow, "DeepTarget");
                 Require(target.Current.Name == "Deep Target", "Deep target could not be resolved.");
             });
 
-            Run("T07 Dynamic target disappears and returns through GUI", () =>
+            Run("13. T07 Dynamic target disappears and returns through GUI", () =>
             {
                 Invoke(FindByName(hostWindow, "Toggle dynamic target"));
                 WaitUntil(() => TryFindByAutomationId(hostWindow, "AppearingTarget") is null,
@@ -190,7 +190,7 @@ internal static class Program
                     "Dynamic target did not return.");
             });
 
-            Run("T08 Second top-level window opens in same process through GUI", () =>
+            Run("14. T08 Second top-level window opens in same process through GUI", () =>
             {
                 Invoke(FindByName(hostWindow, "Open second test window"));
                 var second = WaitForTopLevelWindow("GWTP UIA Test Host — Second Window");
@@ -198,7 +198,7 @@ internal static class Program
                     "Second window is not owned by the same process.");
             });
 
-            Run("T03 no-AutomationId target survives picker rediscovery", () =>
+            Run("15. T03 no-AutomationId target survives picker rediscovery", () =>
             {
                 var target = FindByName(hostWindow, "No AutomationId Button");
                 SelectThroughRealPicker(runtimeWindow, target);
@@ -206,7 +206,7 @@ internal static class Program
                     "No-AutomationId target did not remain attached after picker rediscovery.");
             });
 
-            Run("T05 dynamic Name exposes current descriptor limitation after authored selection", () =>
+            Run("16. T05 dynamic Name exposes current descriptor limitation after authored selection", () =>
             {
                 var target = FindByAutomationId(hostWindow, "DynamicNameTarget");
                 var authoredName = target.Current.Name;
@@ -219,7 +219,7 @@ internal static class Program
                     "Current descriptor unexpectedly rediscovered a target whose persisted Name changed.");
             });
 
-            Run("T07 active dynamic target hides when removed and returns event-driven", () =>
+            Run("17. T07 active dynamic target hides when removed and returns event-driven", () =>
             {
                 var target = FindByAutomationId(hostWindow, "AppearingTarget");
                 SelectThroughRealPicker(runtimeWindow, target);
@@ -232,7 +232,7 @@ internal static class Program
                     "Dynamic target did not return to the host.");
             });
 
-            Run("T08 duplicate leaf in second same-process window does not steal authored target", () =>
+            Run("18. T08 duplicate leaf in second same-process window does not steal authored target", () =>
             {
                 var second = WaitForTopLevelWindow("GWTP UIA Test Host — Second Window");
                 var secondDuplicate = FindByAutomationId(second, "SharedContinue");
@@ -335,7 +335,7 @@ internal static class Program
                     "Same-process second-window duplicate stole the authored target.");
             });
 
-            Run("Closing tracked host removes overlays and runtime stays responsive", () =>
+            Run("19. Closing tracked host removes overlays and runtime stays responsive", () =>
             {
                 var hostHwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
                 SendMessage(hostHwnd, WmClose, IntPtr.Zero, IntPtr.Zero);
@@ -348,7 +348,7 @@ internal static class Program
                 WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
             });
 
-            Run("Cross-launch rediscovery finds authored target in a new process instance", () =>
+            Run("20. Cross-launch rediscovery finds authored target in a new process instance", () =>
             {
                 var reopenedHost = WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
                 var reopenedTarget = FindTargetWithinGroup(reopenedHost, "GroupA", "SharedContinue");
@@ -360,7 +360,7 @@ internal static class Program
                     "Authored target was not rediscovered after the target application restarted.");
             });
 
-            Run("Two identical app instances fail safely instead of choosing an arbitrary target", () =>
+            Run("21. Two identical app instances fail safely instead of choosing an arbitrary target", () =>
             {
                 var firstHost = WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
                 using var secondInstance = Process.Start(new ProcessStartInfo(hostExe) { UseShellExecute = true });
