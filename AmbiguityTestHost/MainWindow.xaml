@@ -1,27 +1,93 @@
 <Window x:Class="GWTP_Ambiguity_TestHost.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="GWTP Ambiguity Test Host"
-        Height="300"
-        Width="560"
+        Title="GWTP Windows UIA Test Host"
+        Height="760"
+        Width="900"
+        MinHeight="620"
+        MinWidth="760"
         WindowStartupLocation="CenterScreen">
-    <Grid Margin="24">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="24" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
-        <GroupBox Grid.Column="0" Header="Group A" AutomationProperties.AutomationId="GroupA">
-            <Grid Margin="18">
-                <Button Width="140" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Content="Continue" AutomationProperties.AutomationId="SharedContinue" />
-            </Grid>
-        </GroupBox>
-        <GroupBox Grid.Column="2" Header="Group B" AutomationProperties.AutomationId="GroupB">
-            <Grid Margin="18">
-                <Button Width="140" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Content="Continue" AutomationProperties.AutomationId="SharedContinue" />
-            </Grid>
-        </GroupBox>
-    </Grid>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24">
+            <TextBlock FontSize="24" FontWeight="SemiBold" Text="GWTP Windows UIA Test Host" />
+            <TextBlock Margin="0,6,0,20" Foreground="#666666"
+                       Text="Deterministic UI Automation scenarios for validating the Windows target descriptor." />
+
+            <GroupBox Header="T01 — Duplicate leaf identity under different parents">
+                <Grid Margin="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="20" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <GroupBox Grid.Column="0" Header="Group A" AutomationProperties.AutomationId="GroupA">
+                        <Button Margin="16" Height="40" Content="Continue"
+                                AutomationProperties.AutomationId="SharedContinue" />
+                    </GroupBox>
+                    <GroupBox Grid.Column="2" Header="Group B" AutomationProperties.AutomationId="GroupB">
+                        <Button Margin="16" Height="40" Content="Continue"
+                                AutomationProperties.AutomationId="SharedContinue" />
+                    </GroupBox>
+                </Grid>
+            </GroupBox>
+
+            <GroupBox Margin="0,14,0,0" Header="T02 — TextBox with AutomationId">
+                <TextBox Margin="16" Height="34" VerticalContentAlignment="Center"
+                         Text="Stable textbox" AutomationProperties.AutomationId="StableTextBox" />
+            </GroupBox>
+
+            <GroupBox Margin="0,14,0,0" Header="T03 — TextBox without authored AutomationId">
+                <TextBox Margin="16" Height="34" VerticalContentAlignment="Center" Text="No automation id" />
+            </GroupBox>
+
+            <GroupBox Margin="0,14,0,0" Header="T04 — Button without authored AutomationId">
+                <Button Margin="16" Height="40" Content="No AutomationId Button" />
+            </GroupBox>
+
+            <GroupBox Margin="0,14,0,0" Header="T05 — Dynamic Name">
+                <StackPanel Margin="16" Orientation="Horizontal">
+                    <Button x:Name="DynamicNameButton" Width="180" Height="40" Content="Dynamic target 1"
+                            AutomationProperties.AutomationId="DynamicNameTarget" />
+                    <Button Margin="12,0,0,0" Width="150" Height="40" Content="Change target name"
+                            Click="ChangeDynamicName_Click" />
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Margin="0,14,0,0" Header="T06 — Deep hierarchy">
+                <Border Margin="16" Padding="12" BorderBrush="#CCCCCC" BorderThickness="1">
+                    <Grid>
+                        <StackPanel AutomationProperties.AutomationId="DeepMeaningfulContainer">
+                            <Border Padding="10">
+                                <Grid>
+                                    <Border Padding="10">
+                                        <Button Height="40" Content="Deep Target"
+                                                AutomationProperties.AutomationId="DeepTarget" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </GroupBox>
+
+            <GroupBox Margin="0,14,0,0" Header="T07 — Dynamic appearance">
+                <StackPanel Margin="16">
+                    <Button Width="180" Height="36" HorizontalAlignment="Left"
+                            Content="Toggle dynamic target" Click="ToggleDynamicTarget_Click" />
+                    <Button x:Name="DynamicTargetButton" Margin="0,10,0,0" Width="180" Height="40"
+                            HorizontalAlignment="Left" Content="Appearing Target"
+                            AutomationProperties.AutomationId="AppearingTarget" />
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Margin="0,14,0,0" Header="T08 — Second window in same process">
+                <StackPanel Margin="16">
+                    <Button Width="210" Height="40" HorizontalAlignment="Left"
+                            Content="Open second test window" Click="OpenSecondWindow_Click" />
+                    <TextBlock Margin="0,8,0,0" Foreground="#666666"
+                               Text="The second window contains another Same Process Target button." />
+                </StackPanel>
+            </GroupBox>
+        </StackPanel>
+    </ScrollViewer>
 </Window>
