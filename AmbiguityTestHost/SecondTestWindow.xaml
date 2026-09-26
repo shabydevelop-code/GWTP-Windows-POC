@@ -8,5 +8,7 @@
         <TextBlock FontSize="18" FontWeight="SemiBold" Text="T08 — Same process, second window" />
         <Button Margin="0,24,0,0" Height="42" Content="Same Process Target"
                 AutomationProperties.AutomationId="SameProcessTarget" />
+        <Button Margin="0,12,0,0" Height="42" Content="Continue"
+                AutomationProperties.AutomationId="SharedContinue" />
     </StackPanel>
 </Window>
