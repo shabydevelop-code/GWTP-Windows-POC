@@ -200,6 +200,7 @@ internal static class Program
 
             Run("15. T03 no-AutomationId target survives picker rediscovery", () =>
             {
+                PrepareHostTargetForPicker(runtimeWindow, hostWindow, "No AutomationId Button");
                 var target = FindByName(hostWindow, "No AutomationId Button");
                 SelectThroughRealPicker(runtimeWindow, target);
                 Require(IsOverlayAttached(runtime.Id, target),
@@ -208,6 +209,7 @@ internal static class Program
 
             Run("16. T05 dynamic Name exposes current descriptor limitation after authored selection", () =>
             {
+                PrepareHostTargetForPicker(runtimeWindow, hostWindow, automationId: "DynamicNameTarget");
                 var target = FindByAutomationId(hostWindow, "DynamicNameTarget");
                 var authoredName = target.Current.Name;
                 SelectThroughRealPicker(runtimeWindow, target);
@@ -679,6 +681,37 @@ internal static class Program
     private static AutomationElement? TryFindByAutomationId(AutomationElement root, string id)
         => root.FindFirst(TreeScope.Descendants,
             new PropertyCondition(AutomationElement.AutomationIdProperty, id));
+
+    private static void PrepareHostTargetForPicker(
+        AutomationElement runtimeWindow,
+        AutomationElement hostWindow,
+        string? name = null,
+        string? automationId = null)
+    {
+        var hostHwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
+        ShowWindow(hostHwnd, SwRestore);
+        ArrangeWindowsForPicker(runtimeWindow, hostWindow);
+
+        var scenarioScroll = TryFindByAutomationId(hostWindow, "ScenarioScrollViewer");
+        if (scenarioScroll is not null &&
+            scenarioScroll.TryGetCurrentPattern(ScrollPattern.Pattern, out var scrollObject) &&
+            scrollObject is ScrollPattern scroll &&
+            scroll.Current.VerticallyScrollable)
+        {
+            AutomationElement? target = automationId is not null
+                ? TryFindByAutomationId(hostWindow, automationId)
+                : name is not null ? TryFindByName(hostWindow, name) : null;
+
+            if (target is not null &&
+                target.TryGetCurrentPattern(ScrollItemPattern.Pattern, out var itemObject) &&
+                itemObject is ScrollItemPattern item)
+            {
+                item.ScrollIntoView();
+            }
+        }
+
+        SetForegroundWindow(hostHwnd);
+    }
 
     private static AutomationElement FindTargetWithinGroup(
         AutomationElement window,
