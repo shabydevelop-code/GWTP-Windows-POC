@@ -235,3 +235,11 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Diagnostic logging records ambiguous candidate counts and whether ancestor identity resolved the target.
 - This remains POC/runtime identity data only; nothing was copied into the main GWTP repository and no production DB/API schema was changed.
 - Manual verification required before promoting this shape to a persisted Windows target DTO: verify ordinary existing targets still rediscover, then verify two controls with the same leaf identity under different meaningful parents resolve to the originally selected control.
+
+## UI responsiveness during host shutdown — 2026-09-26 (pending manual verification)
+- A new observation showed that the GWTP WPF window itself becomes unresponsive during the same host-shutdown interval in which guidance remains visible.
+- Inspection identified synchronous cross-process UI Automation reads of BoundingRectangle/IsOffscreen inside `RefreshBounds()` running on the WPF Dispatcher. A target application/provider can block these UIA calls during shutdown, which would block the entire GWTP UI thread even before a definitive HIDE/DESTROY signal arrives.
+- Bounds/offscreen reads now run off the WPF UI thread. Only the resulting state/event dispatch returns to the Dispatcher.
+- Refresh requests are coalesced so UIA property/location/foreground events cannot create parallel bounds-read work while one cross-process read is still outstanding.
+- This change does not infer host closure, add polling, or change the existing definitive HIDE/DESTROY/Process.Exited lifecycle contract. Its purpose is to keep GWTP responsive even when a UIA provider stalls.
+- Manual verification required: track a Notepad element, close Notepad, immediately interact with/move the GWTP window during the previous delay interval, and observe whether the runtime stays responsive. Also verify normal move/minimize/restore tracking remains correct.
