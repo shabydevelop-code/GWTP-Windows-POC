@@ -248,3 +248,9 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Manual verification after moving BoundingRectangle/IsOffscreen reads off the WPF Dispatcher showed that GWTP still freezes while Notepad is closing. Therefore synchronous bounds reads were not the sole cause.
 - No second speculative behavioral fix was introduced. Targeted persistent diagnostics were added around UIA property callbacks, foreground Dispatcher work, unavailable notification, tracker disposal, and specifically Automation.RemoveAutomationPropertyChangedEventHandler.
 - Next reproduction should inspect the last Begin/End pair in windows-runtime.log to identify the exact blocking boundary before changing lifecycle architecture.
+
+## Host-shutdown freeze root cause and fix — 2026-09-26 (pending manual verification)
+- Persistent diagnostics isolated the UI freeze precisely: during Notepad shutdown, `Automation.RemoveAutomationPropertyChangedEventHandler` blocked from 12:09:24.674 to 12:09:30.694 (about 6.02 seconds) while running inside tracker Dispose on the WPF UI thread.
+- UIA property-handler removal now runs off the WPF Dispatcher. Tracker Dispose marks the tracker disposed first, so any late UIA callback cannot mutate active runtime state; GWTP-owned process/WinEvent resources continue to be detached synchronously and immediately.
+- This targets the measured blocking boundary rather than inferring application closure or adding polling/timeouts.
+- Manual verification required: close Notepad while guidance is active and verify the GWTP window remains responsive and the guidance/highlight are removed immediately when unavailable notification is received, even if the background UIA unsubscription itself still takes several seconds.
