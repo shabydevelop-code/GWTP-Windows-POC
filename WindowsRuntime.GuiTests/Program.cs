@@ -95,11 +95,15 @@ internal static class Program
             {
                 var target = FindAllByAutomationId(hostWindow, "SharedContinue")[1];
                 var runtimeHwnd = new IntPtr(runtimeWindow.Current.NativeWindowHandle);
-                SetForegroundWindow(runtimeHwnd);
+                Require(SetForegroundWindow(runtimeHwnd), "Could not request unrelated foreground window.");
+                WaitUntil(() => GetForegroundWindow() == runtimeHwnd,
+                    "Unrelated window did not actually become foreground.");
                 WaitUntil(() => TryFindRuntimeWindow(runtime.Id, "GWTP Guidance") is null,
                     "Guidance remained visible over unrelated foreground window.");
                 var hostHwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
-                SetForegroundWindow(hostHwnd);
+                Require(SetForegroundWindow(hostHwnd), "Could not request host foreground window.");
+                WaitUntil(() => GetForegroundWindow() == hostHwnd,
+                    "Host window did not actually regain foreground.");
                 WaitUntil(() => IsOverlayAttached(runtime.Id, target),
                     "Guidance did not return when host regained foreground.");
             });
