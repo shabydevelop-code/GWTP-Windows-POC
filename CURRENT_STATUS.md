@@ -308,3 +308,11 @@ Manual verification of Restore behavior is still required after pulling this cha
 - T08 exercises process-scoped lookup when one process owns multiple top-level windows.
 - The host is test infrastructure only; no new production descriptor fields were added and the main GWTP DB/API remain unchanged.
 - Next: execute the matrix, record which current identity fields are stable/insufficient, then freeze the first production Windows Target Descriptor contract from evidence.
+
+## Windows GUI sanity foundation — 2026-09-26 (pending first local run)
+- Added WindowsRuntime.GuiTests as a separate executable GUI/E2E test project plus root run-sanity.ps1.
+- Test policy mirrors the Web suite: behavioral verification must operate through the public GUI/UI Automation surface of the real executables, not by directly invoking MainWindow.FindElement, ElementTrackingService, or other runtime internals.
+- run-sanity.ps1 builds the runtime, external UIA Test Host, and GUI runner, then executes the GUI suite.
+- Initial automated coverage opens the external Test Host by invoking the real runtime GUI button and exercises T02-T08 through UI Automation: controls with/without authored AutomationId, dynamic Name mutation, deep hierarchy, dynamic visibility, and a second top-level window in the same process.
+- T01 end-to-end picker/ancestor rediscovery and overlay lifecycle tests remain to be automated through the GUI; no test-only runtime API was added to bypass the picker.
+- The test runner uses bounded waits only as test safety synchronization around observable GUI state; production runtime remains event-driven with no polling.
