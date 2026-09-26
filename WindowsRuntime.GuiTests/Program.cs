@@ -218,9 +218,26 @@ internal static class Program
         WaitUntil(() =>
         {
             var atPoint = AutomationElement.FromPoint(new System.Windows.Point(x, y));
-            return atPoint is not null &&
-                   atPoint.Current.AutomationId == target.Current.AutomationId &&
-                   atPoint.Current.ProcessId == target.Current.ProcessId;
+            if (atPoint is null || atPoint.Current.ProcessId != target.Current.ProcessId)
+            {
+                return false;
+            }
+
+            // UIA FromPoint may legitimately return a child presentation element
+            // inside the authored control. Accept the point when that element is
+            // the target itself or descends from it.
+            var current = atPoint;
+            while (current is not null)
+            {
+                if (Automation.Compare(current, target))
+                {
+                    return true;
+                }
+
+                current = TreeWalker.ControlViewWalker.GetParent(current);
+            }
+
+            return false;
         }, "Intended picker target is obscured at click point.");
         mouse_event(MouseeventfLeftdown, 0, 0, 0, UIntPtr.Zero);
         WaitUntil(() => (GetAsyncKeyState(VkLbutton) & 0x8000) != 0,
