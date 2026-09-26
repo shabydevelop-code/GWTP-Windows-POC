@@ -344,3 +344,9 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Added GUI coverage for **two indistinguishable application instances in the same Windows session**: the runtime must fail safely/pending rather than choose an arbitrary target, then recover after ambiguity is removed.
 - Added deterministic test-host scenarios for a recreated UIA target and a dynamic top-level window title for the next descriptor-hardening tests.
 - The expanded suite has not yet been recorded as green; run `run-sanity.ps1` and record the new baseline only after all new tests pass.
+
+
+### Cross-launch pending lifecycle (2026-09-26)
+- Focused GUI test 20 isolated a runtime lifecycle defect rather than a picker/setup defect: when the tracked target process/window disappeared, `OnTrackedElementUnavailable` closed the overlays but did not enter the event-driven pending-target state.
+- The active authored Windows step now preserves its `ElementIdentity` and transitions to `PendingWindowTargetWatcher` when its tracked element becomes unavailable. A later matching application/window instance can therefore resume the same step through `WindowPattern.WindowOpenedEvent`; no polling, PID persistence, HWND persistence, or arbitrary delay was added.
+- Focused verification command: `./run-sanity.ps1 -Test 20`. Full 21-test regression must still be run after focused test 20 is green.
