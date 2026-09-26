@@ -359,6 +359,19 @@ internal static class Program
                     "Previous test-host process did not exit before cross-launch rediscovery.",
                     LaunchTimeoutMs);
                 var reopenedHost = WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
+                // The replacement host is a fresh process and starts at its default
+                // scroll position. Bring the authored T01 target into the UIA viewport
+                // before asserting attachment; rediscovery identity must not depend on
+                // the old process instance, while overlay visibility still requires
+                // the target to have usable on-screen bounds.
+                var scenarioScroll = TryFindByAutomationId(reopenedHost, "ScenarioScrollViewer");
+                if (scenarioScroll is not null &&
+                    scenarioScroll.TryGetCurrentPattern(ScrollPattern.Pattern, out var reopenedScrollObject) &&
+                    reopenedScrollObject is ScrollPattern reopenedScroll &&
+                    reopenedScroll.Current.VerticallyScrollable)
+                {
+                    reopenedScroll.SetScrollPercent(ScrollPattern.NoScroll, 0);
+                }
                 var reopenedTarget = FindTargetWithinGroup(reopenedHost, "GroupA", "SharedContinue");
                 var reopenedHwnd = new IntPtr(reopenedHost.Current.NativeWindowHandle);
                 SetForegroundWindow(reopenedHwnd);
