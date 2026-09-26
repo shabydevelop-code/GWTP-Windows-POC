@@ -270,3 +270,10 @@ Manual verification of Restore behavior is still required after pulling this cha
 - This creates a deterministic ambiguity case for validating ancestor-based target rediscovery without depending on the UIA structure of an external application.
 - Test procedure: open Ambiguity Test, select Group A Continue, verify rediscovery/highlight remains on Group A; repeat for Group B. Diagnostics should record `FindElement.Ambiguous count=2` followed by `FindElement.ResolvedByAncestor`.
 - The harness is test-only and is not part of the future Editor/Learner production flow.
+
+## Ambiguity harness isolated into external process — 2026-09-26 (pending manual verification)
+- Manual testing showed target rediscovery selected the expected ambiguous control, but guidance did not track correctly when the test window lived inside the GWTP runtime process.
+- That setup was invalid for end-to-end tracking because production targets are external applications and the runtime WinEvent hooks intentionally use WINEVENT_SKIPOWNPROCESS.
+- Removed the in-process AmbiguityTestWindow and added a separate WPF AmbiguityTestHost executable/project containing the same two duplicate Continue controls under GroupA/GroupB.
+- The POC's Open Ambiguity Test action now launches that host as a separate process. Runtime targeting/tracking logic was not changed to accommodate the test.
+- Manual verification required: select each Continue control independently, verify ancestor-based rediscovery returns the selected group, then move/minimize/restore/close the external test host and verify guidance/highlight tracking behaves like an ordinary external Windows application.
