@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private GuidanceWindow? _guidanceWindow;
     private ElementTrackingService? _elementTracker;
     private PendingWindowTargetWatcher? _pendingTargetWatcher;
+    private ElementIdentity? _pendingTargetIdentity;
 
     public MainWindow()
     {
@@ -242,18 +243,30 @@ public partial class MainWindow : Window
         }
 
         StopPendingTargetWait();
-        _pendingTargetWatcher = new PendingWindowTargetWatcher(Dispatcher, TryResumePendingTarget);
+        _pendingTargetIdentity = _selectedIdentity;
+        _pendingTargetWatcher = new PendingWindowTargetWatcher(
+            Dispatcher,
+            () => TryResumePendingTarget(_pendingTargetIdentity));
         _pendingTargetWatcher.Start();
         StatusText.Text = $"Waiting for the application window for test step {_currentTestStepIndex + 1}.";
         DiagnosticLog.Write("PendingTarget.Waiting");
     }
 
-    private void TryResumePendingTarget()
+    private void TryResumePendingTarget(ElementIdentity? pendingIdentity)
     {
-        if (_selectedIdentity is null) return;
+        if (pendingIdentity is null) return;
 
         DiagnosticLog.Write("PendingTarget.WindowOpened");
-        var element = FindElement(_selectedIdentity);
+
+        // The callback belongs to the identity that entered pending state. A later
+        // picker/step transition may already have changed _selectedIdentity.
+        if (!Equals(pendingIdentity, _selectedIdentity))
+        {
+            DiagnosticLog.Write("PendingTarget.StaleResolutionIgnored");
+            return;
+        }
+
+        var element = FindElement(pendingIdentity);
         if (element is null) return;
 
         DiagnosticLog.Write("PendingTarget.Resolved");
@@ -281,6 +294,7 @@ public partial class MainWindow : Window
     {
         _pendingTargetWatcher?.Dispose();
         _pendingTargetWatcher = null;
+        _pendingTargetIdentity = null;
     }
 
     private void UpdateGuidanceNavigationState()
