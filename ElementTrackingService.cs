@@ -156,7 +156,16 @@ internal sealed class ElementTrackingService : IDisposable
             _dispatcher.BeginInvoke(() =>
             {
                 DiagnosticLog.Write("Tracker.ForegroundDispatcher.Begin");
-                if (IsHostWindowEvent(hwnd))
+
+                // Do not trust the callback HWND alone. Foreground transitions can
+                // queue faster than the dispatcher processes them, so an older host
+                // activation callback may run after another application is already
+                // foreground. Re-read the authoritative foreground window now.
+                var currentForeground = GetForegroundWindow();
+                DiagnosticLog.Write(
+                    $"Tracker.ForegroundDispatcher hwnd=0x{hwnd.ToInt64():X} current=0x{currentForeground.ToInt64():X}");
+
+                if (IsHostWindowEvent(currentForeground))
                 {
                     HostActivated?.Invoke();
                     RequestBoundsRefresh();
@@ -165,6 +174,7 @@ internal sealed class ElementTrackingService : IDisposable
                 {
                     ElementTemporarilyHidden?.Invoke();
                 }
+
                 DiagnosticLog.Write("Tracker.ForegroundDispatcher.End");
             });
             DiagnosticLog.Write("Tracker.ForegroundEvent.End");
@@ -494,6 +504,9 @@ internal sealed class ElementTrackingService : IDisposable
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool UnhookWinEvent(IntPtr winEventHook);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
