@@ -298,3 +298,13 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Group A/Group B duplicate targets continue to resolve correctly through ancestor disambiguation.
 - The minimize/restore overlay behavior is also verified as correct in the same test cycle.
 - This closes the measured ~0.5 s transition-latency issue and the minimize upper-left overlay flash observed during ambiguity testing.
+
+## Windows UIA target laboratory — 2026-09-26 (pending manual matrix)
+- Expanded the former ambiguity-only external host into a deterministic Windows UIA Test Host for hardening the persisted Windows Target Descriptor before main DB/API integration.
+- Current scenarios: T01 duplicate leaf identity under distinct parents; T02 TextBox with AutomationId; T03 TextBox without authored AutomationId; T04 Button without authored AutomationId; T05 stable AutomationId with runtime-changing Name; T06 deep container hierarchy; T07 dynamically appearing/disappearing target; T08 second top-level window in the same process.
+- T01 remains the repeatable ancestor-disambiguation case already manually verified.
+- T05 intentionally tests whether persisted Name should be mandatory matching data when a stable AutomationId exists.
+- T07 exercises event-driven unavailable/pending-target behavior without polling.
+- T08 exercises process-scoped lookup when one process owns multiple top-level windows.
+- The host is test infrastructure only; no new production descriptor fields were added and the main GWTP DB/API remain unchanged.
+- Next: execute the matrix, record which current identity fields are stable/insufficient, then freeze the first production Windows Target Descriptor contract from evidence.
