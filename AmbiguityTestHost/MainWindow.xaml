@@ -80,6 +80,18 @@
                 </StackPanel>
             </GroupBox>
 
+            <GroupBox Margin="0,14,0,0" Header="T09 — Recreated target">
+                <StackPanel Margin="16">
+                    <Button Width="180" Height="36" HorizontalAlignment="Left"
+                            Content="Recreate target" Click="RecreateTarget_Click" />
+                    <ContentControl x:Name="RecreatedTargetHost" Margin="0,10,0,0" />
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Margin="0,14,0,0" Header="T10 — Dynamic window title">
+                <Button Margin="16" Width="190" Height="40" HorizontalAlignment="Left"
+                        Content="Change window title" Click="ChangeWindowTitle_Click" />
+            </GroupBox>
             <GroupBox Margin="0,14,0,0" Header="T08 — Second window in same process">
                 <StackPanel Margin="16">
                     <Button Width="210" Height="40" HorizontalAlignment="Left"
