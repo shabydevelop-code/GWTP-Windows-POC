@@ -263,8 +263,27 @@ internal static class Program
                     // because T08 adds another SharedContinue in the second window.
                     var groupA = TryFindByAutomationId(hostWindow, "GroupA");
                     if (groupA is null) return false;
-                    authored = FindAllByAutomationId(groupA, "SharedContinue").FirstOrDefault();
+
+                    // GroupBox is not guaranteed to be the Button's parent in the
+                    // UIA Control View. Resolve the duplicate leafs from the host,
+                    // then identify the authored one by its screen geometry relative
+                    // to Group A. Bring it into view before the physical picker.
+                    var groupRect = groupA.Current.BoundingRectangle;
+                    authored = FindAllByAutomationId(hostWindow, "SharedContinue")
+                        .FirstOrDefault(candidate =>
+                        {
+                            var rect = candidate.Current.BoundingRectangle;
+                            var centerX = rect.Left + rect.Width / 2;
+                            return centerX >= groupRect.Left && centerX <= groupRect.Right;
+                        });
                     if (authored is null) return false;
+
+                    if (authored.TryGetCurrentPattern(ScrollItemPattern.Pattern, out var scrollPattern) &&
+                        scrollPattern is ScrollItemPattern scrollItem)
+                    {
+                        scrollItem.ScrollIntoView();
+                    }
+
                     var rect = authored.Current.BoundingRectangle;
                     if (rect.IsEmpty || rect.Width <= 0 || rect.Height <= 0) return false;
                     var center = new System.Drawing.Point(
