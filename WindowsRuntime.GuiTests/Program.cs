@@ -196,17 +196,19 @@ internal static class Program
         WaitUntil(() => FindByAutomationId(runtimeWindow, "SelectElementButton").Current.Name == "Cancel",
             "Picker did not enter selection mode.");
 
+        var hostHwnd = GetAncestorWindowFromElement(target);
+        Require(hostHwnd != IntPtr.Zero, "Could not resolve target host window.");
+        Require(SetForegroundWindow(hostHwnd), "Could not bring target host to foreground.");
+        WaitUntil(() => GetForegroundWindow() == hostHwnd,
+            "Target host did not become the foreground window.");
+
+        // Foreground activation can move/scroll WPF content. Resolve the live target
+        // geometry only after activation, then place the cursor on that geometry.
         var rect = target.Current.BoundingRectangle;
         var x = (int)Math.Round(rect.Left + rect.Width / 2);
         var y = (int)Math.Round(rect.Top + rect.Height / 2);
-        SetCursorPos(x, y);
-        var hostHwnd = GetAncestorWindowFromElement(target);
-        Require(hostHwnd != IntPtr.Zero, "Could not resolve target host window.");
-        SetForegroundWindow(hostHwnd);
-
-        // This delay is only test synchronization for the production picker's existing
-        // 40 ms sampling loop; foreground is now made explicit rather than inferred.
-        Thread.Sleep(120);
+        Require(SetCursorPos(x, y), "Could not move cursor to target.");
+        WaitUntil(() => IsCursorInside(rect), "Cursor did not reach target bounds.");
         mouse_event(MouseeventfLeftdown, 0, 0, 0, UIntPtr.Zero);
         Thread.Sleep(120);
         mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
@@ -264,6 +266,13 @@ internal static class Program
 
     private static void AssertOverlayAttached(int runtimeProcessId, AutomationElement target)
         => Require(IsOverlayAttached(runtimeProcessId, target), "Highlight/guidance are not attached to the selected target.");
+
+    private static bool IsCursorInside(System.Windows.Rect rect)
+    {
+        if (!GetCursorPos(out var point)) return false;
+        return point.X >= rect.Left && point.X <= rect.Right &&
+               point.Y >= rect.Top && point.Y <= rect.Bottom;
+    }
 
     private static IntPtr GetAncestorWindowFromElement(AutomationElement element)
     {
@@ -397,8 +406,17 @@ internal static class Program
     private const uint WmClose = 0x0010;
     private const uint GaRoot = 2;
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint { public int X; public int Y; }
+
     [DllImport("user32.dll")]
     private static extern bool SetCursorPos(int x, int y);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out NativePoint point);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
