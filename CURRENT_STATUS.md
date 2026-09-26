@@ -350,3 +350,9 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Focused GUI test 20 isolated a runtime lifecycle defect rather than a picker/setup defect: when the tracked target process/window disappeared, `OnTrackedElementUnavailable` closed the overlays but did not enter the event-driven pending-target state.
 - The active authored Windows step now preserves its `ElementIdentity` and transitions to `PendingWindowTargetWatcher` when its tracked element becomes unavailable. A later matching application/window instance can therefore resume the same step through `WindowPattern.WindowOpenedEvent`; no polling, PID persistence, HWND persistence, or arbitrary delay was added.
 - Focused verification command: `./run-sanity.ps1 -Test 20`. Full 21-test regression must still be run after focused test 20 is green.
+
+
+### Pending-target stale callback isolation (2026-09-26)
+- Focused sequence `./run-sanity.ps1 -Test 17,18` reproduced the full-suite T08 regression while test 18 alone remained green, proving direct lifecycle state leakage from T07 rather than a WindowIdentity lookup defect.
+- Pending-target resume now revalidates that the identity associated with the active step is still current before a queued UIA window-open resolution may replace the tracker; stale resolutions are ignored and logged as `PendingTarget.StaleResolutionIgnored`.
+- Reverify focused `17,18`, then focused `20`, then the complete 21-test GUI regression.
