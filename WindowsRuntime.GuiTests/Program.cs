@@ -721,7 +721,7 @@ internal static class Program
                         (int)Math.Round(rect.Left + rect.Width / 2),
                         (int)Math.Round(rect.Top + rect.Height / 2));
                     if (!rect.IsEmpty && rect.Width > 0 && rect.Height > 0 &&
-                        Forms.Screen.AllScreens.Any(screen => screen.Bounds.Contains(center)))
+                        IsPointInsideHostClientArea(hostHwnd, center))
                     {
                         break;
                     }
@@ -732,6 +732,16 @@ internal static class Program
         }
 
         SetForegroundWindow(hostHwnd);
+    }
+
+    private static bool IsPointInsideHostClientArea(IntPtr hwnd, System.Drawing.Point point)
+    {
+        if (!GetClientRect(hwnd, out var client)) return false;
+        var topLeft = new NativePoint { X = client.Left, Y = client.Top };
+        var bottomRight = new NativePoint { X = client.Right, Y = client.Bottom };
+        if (!ClientToScreen(hwnd, ref topLeft) || !ClientToScreen(hwnd, ref bottomRight)) return false;
+        return point.X >= topLeft.X && point.X < bottomRight.X &&
+               point.Y >= topLeft.Y && point.Y < bottomRight.Y;
     }
 
     private static AutomationElement FindTargetWithinGroup(
@@ -811,6 +821,12 @@ internal static class Program
 
     [StructLayout(LayoutKind.Sequential)]
     private struct NativePoint { public int X; public int Y; }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetClientRect(IntPtr hwnd, out NativeRect rect);
+
+    [DllImport("user32.dll")]
+    private static extern bool ClientToScreen(IntPtr hwnd, ref NativePoint point);
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int virtualKey);
