@@ -198,6 +198,53 @@ internal static class Program
                     "Second window is not owned by the same process.");
             });
 
+            Run("T03 no-AutomationId target survives picker rediscovery", () =>
+            {
+                var target = FindByName(hostWindow, "No AutomationId Button");
+                SelectThroughRealPicker(runtimeWindow, target);
+                Require(IsOverlayAttached(runtime.Id, target),
+                    "No-AutomationId target did not remain attached after picker rediscovery.");
+            });
+
+            Run("T05 dynamic Name exposes current descriptor limitation after authored selection", () =>
+            {
+                var target = FindByAutomationId(hostWindow, "DynamicNameTarget");
+                SelectThroughRealPicker(runtimeWindow, target);
+                Invoke(FindByName(hostWindow, "Change target name"));
+                WaitUntil(() => FindByAutomationId(hostWindow, "DynamicNameTarget").Current.Name != target.Current.Name,
+                    "Dynamic target name did not change after authored selection.");
+                Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
+                WaitUntil(() => TryFindRuntimeWindow(runtime.Id, "GWTP Guidance") is null,
+                    "Current descriptor unexpectedly rediscovered a target whose persisted Name changed.");
+            });
+
+            Run("T07 active dynamic target hides when removed and returns event-driven", () =>
+            {
+                var target = FindByAutomationId(hostWindow, "AppearingTarget");
+                SelectThroughRealPicker(runtimeWindow, target);
+                Invoke(FindByName(hostWindow, "Toggle dynamic target"));
+                WaitUntil(() => TryFindRuntimeWindow(runtime.Id, "GWTP Guidance") is null &&
+                                TryFindRuntimeWindow(runtime.Id, "GWTP Highlight") is null,
+                    "Active dynamic target overlays remained after target disappeared.");
+                Invoke(FindByName(hostWindow, "Toggle dynamic target"));
+                WaitUntil(() => TryFindByAutomationId(hostWindow, "AppearingTarget") is not null,
+                    "Dynamic target did not return to the host.");
+            });
+
+            Run("T08 duplicate leaf in second same-process window does not steal authored target", () =>
+            {
+                var second = WaitForTopLevelWindow("GWTP UIA Test Host — Second Window");
+                var secondDuplicate = FindByAutomationId(second, "SharedContinue");
+                Require(secondDuplicate.Current.ProcessId == hostWindow.Current.ProcessId,
+                    "Second-window duplicate is not in the same process.");
+
+                var authored = FindAllByAutomationId(hostWindow, "SharedContinue")[0];
+                SelectThroughRealPicker(runtimeWindow, authored);
+                Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
+                WaitUntil(() => IsOverlayAttached(runtime.Id, authored),
+                    "Same-process second-window duplicate stole the authored target.");
+            });
+
             Run("Closing tracked host removes overlays and runtime stays responsive", () =>
             {
                 var hostHwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
