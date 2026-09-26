@@ -548,7 +548,8 @@ public partial class MainWindow : Window
         {
             try
             {
-                if (current.Current.ControlType == ControlType.Window)
+                if (current.Current.ControlType == ControlType.Window &&
+                    current.Current.NativeWindowHandle != 0)
                 {
                     return new WindowIdentity(
                         current.Current.Name ?? string.Empty,
@@ -596,7 +597,8 @@ public partial class MainWindow : Window
     private static AutomationElement? FindElement(ElementIdentity identity)
     {
         var started = Stopwatch.GetTimestamp();
-        DiagnosticLog.Write("FindElement.Begin");
+        DiagnosticLog.Write(
+            $"FindElement.Begin windowName='{identity.Window?.Name}' windowAutomationId='{identity.Window?.AutomationId}'");
         var currentSessionId = Process.GetCurrentProcess().SessionId;
         var processIds = new HashSet<int>();
 
@@ -661,9 +663,15 @@ public partial class MainWindow : Window
                     continue;
                 }
 
-                if (identity.Window is not null && !MatchesWindowIdentity(window, identity.Window))
+                if (identity.Window is not null)
                 {
-                    continue;
+                    var windowMatches = MatchesWindowIdentity(window, identity.Window);
+                    DiagnosticLog.Write(
+                        $"FindElement.WindowCandidate name='{window.Current.Name}' automationId='{window.Current.AutomationId}' matchesAuthoredWindow={windowMatches}");
+                    if (!windowMatches)
+                    {
+                        continue;
+                    }
                 }
 
                 if (MatchesLeafIdentity(window, identity))
