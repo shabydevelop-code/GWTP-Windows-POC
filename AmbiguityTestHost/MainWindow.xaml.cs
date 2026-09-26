@@ -10,8 +10,18 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        RecreatedTargetHost.Content = CreateRecreatedTarget();
         Closed += (_, _) => _secondWindow?.Close();
     }
+
+internal static class ObjectExtensions
+{
+    public static T Also<T>(this T value, Action<T> action)
+    {
+        action(value);
+        return value;
+    }
+}
 
     private void ChangeDynamicName_Click(object sender, RoutedEventArgs e)
     {
@@ -25,6 +35,28 @@ public partial class MainWindow : Window
             DynamicTargetButton.Visibility == Visibility.Visible
                 ? Visibility.Collapsed
                 : Visibility.Visible;
+    }
+
+    private static System.Windows.Controls.Button CreateRecreatedTarget()
+        => new()
+        {
+            Width = 180,
+            Height = 40,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Content = "Recreated Target"
+        }.Also(button => System.Windows.Automation.AutomationProperties.SetAutomationId(button, "RecreatedTarget"));
+
+    private void RecreateTarget_Click(object sender, RoutedEventArgs e)
+    {
+        RecreatedTargetHost.Content = null;
+        RecreatedTargetHost.Content = CreateRecreatedTarget();
+    }
+
+    private void ChangeWindowTitle_Click(object sender, RoutedEventArgs e)
+    {
+        Title = Title == "GWTP Windows UIA Test Host"
+            ? "GWTP Windows UIA Test Host — Changed"
+            : "GWTP Windows UIA Test Host";
     }
 
     private void OpenSecondWindow_Click(object sender, RoutedEventArgs e)
