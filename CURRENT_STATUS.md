@@ -363,3 +363,9 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Focused test 20 then exposed a cleanup interaction: `StopPendingTargetWait()` clears the shared pending field before the queued callback consumes it.
 - The watcher callback now closes over an immutable local `pendingIdentity`; the field remains lifecycle bookkeeping only. This preserves both stale-callback isolation and cross-launch resume semantics.
 - Reverify focused 20, then focused 17,18, then full regression.
+
+
+### Windows GUI regression verified: 21/21 (2026-09-26)
+- Full `./run-sanity.ps1` regression was manually verified after the pending-target lifecycle fixes: **21 passed, 0 failed**.
+- Verified together: physical UIA picker, duplicate/ancestor rediscovery, movement/minimize/foreground tracking, targets with and without AutomationId, dynamic Name limitation evidence, deep hierarchy, dynamic target lifecycle, same-process multi-window disambiguation, host close responsiveness, cross-launch rediscovery, and fail-safe ambiguity across two identical same-session app instances.
+- Current Windows POC baseline is therefore 21/21 green. The production persisted Windows target descriptor remains intentionally unfrozen; the next architecture step is to derive it from the accumulated T01-T10 and lifecycle evidence rather than copying the experimental POC identity verbatim.
