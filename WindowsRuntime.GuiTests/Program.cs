@@ -201,9 +201,9 @@ internal static class Program
         var y = (int)Math.Round(rect.Top + rect.Height / 2);
         SetCursorPos(x, y);
 
-        // The production picker samples physical mouse state on its DispatcherTimer.
-        // Hold the button long enough for at least one 40 ms picker tick to observe
-        // the down transition, then release it like a real desktop click.
+        // Let the production picker observe the cursor over the external target while
+        // the mouse is still up. This establishes the same Up -> Down edge as a user.
+        Thread.Sleep(120);
         mouse_event(MouseeventfLeftdown, 0, 0, 0, UIntPtr.Zero);
         Thread.Sleep(120);
         mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
@@ -212,6 +212,9 @@ internal static class Program
             var button = FindByAutomationId(runtimeWindow, "SelectElementButton");
             return button.Current.Name == "Select Element" && button.Current.IsEnabled;
         }, "Picker did not complete selection.");
+
+        // Do not let a failed/late synthetic click leak selection mode into the next test.
+        mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
     }
 
     private static AutomationElement WaitForRuntimeWindow(int processId, string name)
