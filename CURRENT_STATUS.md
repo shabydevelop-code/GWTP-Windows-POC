@@ -325,3 +325,12 @@ Manual verification of Restore behavior is still required after pulling this cha
 - GuidanceWindow and HighlightWindow now expose stable window Titles for accessibility/UI Automation discovery; this does not add a test-only runtime API or bypass runtime behavior.
 - The suite still treats observable GUI state as the assertion surface. Win32 is used only to reproduce real desktop actions such as physical mouse click, move, minimize/restore, foreground activation, and close.
 - First local execution of the expanded suite is required before this becomes the new green baseline.
+
+
+## Windows GUI regression baseline — 2026-09-26
+- Local end-to-end Windows GUI sanity is green: **14 passed, 0 failed**.
+- The suite now verifies the real picker, duplicate-target ancestor rediscovery, Guidance/Highlight attachment, target movement tracking, minimize/restore lifecycle, foreground hide/restore, UIA target laboratory scenarios T02-T08, and tracked-host close/recovery through the public GUI/UI Automation surface.
+- A real picker defect was found and fixed: WPF hit-testing could return the rendered Text child inside a Button, so authoring selected/highlighted only the caption. Picker hover and capture now normalize presentation Text nodes to the owning UIA control, and the hover highlight is removed before the final UIA hit-test.
+- A real foreground-lifecycle defect was found and fixed: WinEvent hooks used WINEVENT_SKIPOWNPROCESS, which suppressed the foreground event when the unrelated foreground window was the GWTP runtime itself. Foreground observation now includes own-process events, and the tracker evaluates current foreground state before deciding whether overlays should be visible.
+- GUI test synchronization remains state-based. Visual pacing is currently retained around the physical picker flow to make desktop behavior observable during local regression runs; it is test-only and does not introduce polling or fixed delays into production runtime behavior.
+- This supersedes the previous pending-first-run Windows GUI sanity/overlay lifecycle status. Current verified Windows GUI baseline: **14/14**.
