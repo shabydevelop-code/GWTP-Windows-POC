@@ -7,7 +7,7 @@
         MinHeight="620"
         MinWidth="760"
         WindowStartupLocation="CenterScreen">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <ScrollViewer AutomationProperties.AutomationId="ScenarioScrollViewer" VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="24">
             <TextBlock FontSize="24" FontWeight="SemiBold" Text="GWTP Windows UIA Test Host" />
             <TextBlock Margin="0,6,0,20" Foreground="#666666"
