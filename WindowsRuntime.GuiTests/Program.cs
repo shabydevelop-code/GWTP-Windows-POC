@@ -708,6 +708,28 @@ internal static class Program
             {
                 item.ScrollIntoView();
             }
+
+            // WPF controls inside this ScrollViewer do not consistently expose
+            // ScrollItemPattern. If the requested target is still clipped, use the
+            // public ScrollPattern to move through the viewport until its UIA bounds
+            // become physically reachable by the real picker.
+            if (target is not null)
+            {
+                for (var percent = 0.0; percent <= 100.0; percent += 10.0)
+                {
+                    var rect = target.Current.BoundingRectangle;
+                    var center = new System.Drawing.Point(
+                        (int)Math.Round(rect.Left + rect.Width / 2),
+                        (int)Math.Round(rect.Top + rect.Height / 2));
+                    if (!rect.IsEmpty && rect.Width > 0 && rect.Height > 0 &&
+                        Forms.Screen.AllScreens.Any(screen => screen.Bounds.Contains(center)))
+                    {
+                        break;
+                    }
+
+                    scroll.SetScrollPercent(ScrollPattern.NoScroll, percent);
+                }
+            }
         }
 
         SetForegroundWindow(hostHwnd);
