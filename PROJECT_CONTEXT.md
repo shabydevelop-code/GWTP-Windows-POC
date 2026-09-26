@@ -71,3 +71,13 @@ GitHub main is the source of truth. Inspect current code and these context/statu
 - The production contract deliberately does not copy experimental `ElementIdentity` verbatim. It promotes the single POC ancestor to an ordered meaningful ancestor path and changes matching precedence so a stable AutomationId is not invalidated by a changing Name.
 - PID, HWND, SessionId, bounds and RuntimeId remain runtime/transient data and are not persisted. SessionId continues to scope discovery at runtime.
 - The POC's 21/21 GUI baseline remains the evidence baseline for selection/tracking/rediscovery/lifecycle/ambiguity. Further POC changes should now be driven by concrete integration gaps found while implementing the production contract, not by speculative identity expansion.
+
+
+## Browser bridge architecture (2026-09-26)
+
+- The production browser-to-Windows bridge is Chrome/Edge Native Messaging with host name `com.gwtp.windows`.
+- The native host is launched in the interactive browser user's Windows session. This is intentional: UI Automation must remain in the same desktop/session and must not be moved into the central `GWTP.Api` Windows Service.
+- The API service remains responsible for persistent product data, authentication and learner progress; the Windows runtime owns UIA selection/tracking/guidance in the interactive session.
+- Native Messaging requests are event/request driven. Do not introduce local HTTP polling, periodic bridge discovery, or API-service UIA.
+- Editor authoring uses a descriptor-only picker operation: select UIA target -> build frozen WindowsTargetDescriptor -> return it to the extension. Authoring must not show learner GuidanceWindow or mutate learner progress.
+- Native host registration is per user and explicitly scoped to the browser extension ID through `allowed_origins`.
