@@ -351,6 +351,13 @@ internal static class Program
 
             Run("20. Cross-launch rediscovery finds authored target in a new process instance", () =>
             {
+                // Test 19 closes the authored host and opens a replacement. Ensure the
+                // old process is fully gone before exercising cross-launch identity;
+                // otherwise Process.GetProcessesByName can temporarily expose both
+                // generations and correctly make discovery ambiguous.
+                WaitUntil(() => Process.GetProcessesByName("AmbiguityTestHost").Length == 1,
+                    "Previous test-host process did not exit before cross-launch rediscovery.",
+                    LaunchTimeoutMs);
                 var reopenedHost = WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
                 var reopenedTarget = FindTargetWithinGroup(reopenedHost, "GroupA", "SharedContinue");
                 var reopenedHwnd = new IntPtr(reopenedHost.Current.NativeWindowHandle);
