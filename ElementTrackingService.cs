@@ -387,15 +387,23 @@ internal sealed class ElementTrackingService : IDisposable
         }
 
         _disposed = true;
-        try
+        // UI Automation providers may block while their host application is shutting down.
+        // Never let handler removal block the WPF UI thread; the disposed flag already makes
+        // any late callback a no-op for runtime state.
+        var element = _element;
+        _ = Task.Run(() =>
         {
-            DiagnosticLog.Write("Tracker.Dispose.RemoveUIAHandler.Begin");
-            Automation.RemoveAutomationPropertyChangedEventHandler(_element, OnAutomationPropertyChanged);
-            DiagnosticLog.Write("Tracker.Dispose.RemoveUIAHandler.End");
-        }
-        catch
-        {
-        }
+            try
+            {
+                DiagnosticLog.Write("Tracker.Dispose.RemoveUIAHandler.Begin");
+                Automation.RemoveAutomationPropertyChangedEventHandler(element, OnAutomationPropertyChanged);
+                DiagnosticLog.Write("Tracker.Dispose.RemoveUIAHandler.End");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticLog.Write($"Tracker.Dispose.RemoveUIAHandler.Failed {ex.GetType().Name}");
+            }
+        });
 
         if (_hostProcess is not null)
         {
