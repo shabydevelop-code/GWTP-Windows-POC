@@ -498,7 +498,6 @@ public partial class MainWindow : Window
     {
         var started = Stopwatch.GetTimestamp();
         DiagnosticLog.Write("FindElement.Begin");
-        var root = AutomationElement.RootElement;
         var currentSessionId = Process.GetCurrentProcess().SessionId;
         var processIds = new HashSet<int>();
 
@@ -539,28 +538,65 @@ public partial class MainWindow : Window
                 AutomationElement.NameProperty, identity.Name));
         }
 
-        DiagnosticLog.Write("FindElement.RootFindAll.Begin");
-        var candidates = root.FindAll(
-            TreeScope.Descendants,
-            new AndCondition(conditions.ToArray()));
-        DiagnosticLog.Write($"FindElement.RootFindAll.End elapsedMs={Stopwatch.GetElapsedTime(started).TotalMilliseconds:F1}");
-
+        var targetCondition = new AndCondition(conditions.ToArray());
         var sessionCandidates = new List<AutomationElement>();
-        foreach (AutomationElement candidate in candidates)
+
+        // Search only inside top-level windows owned by the authored target process.
+        // A desktop-wide RootElement.Descendants scan is both unnecessary and expensive.
+        var windowCondition = new PropertyCondition(
+            AutomationElement.ControlTypeProperty,
+            ControlType.Window);
+
+        DiagnosticLog.Write("FindElement.ProcessWindows.Begin");
+        var topLevelWindows = AutomationElement.RootElement.FindAll(
+            TreeScope.Children,
+            windowCondition);
+        DiagnosticLog.Write($"FindElement.ProcessWindows.End elapsedMs={Stopwatch.GetElapsedTime(started).TotalMilliseconds:F1}");
+
+        foreach (AutomationElement window in topLevelWindows)
         {
             try
             {
-                if (processIds.Contains(candidate.Current.ProcessId))
+                if (!processIds.Contains(window.Current.ProcessId))
                 {
-                    sessionCandidates.Add(candidate);
+                    continue;
+                }
+
+                if (MatchesLeafIdentity(window, identity))
+                {
+                    sessionCandidates.Add(window);
+                }
+
+                DiagnosticLog.Write("FindElement.WindowFindAll.Begin");
+                var candidates = window.FindAll(TreeScope.Descendants, targetCondition);
+                DiagnosticLog.Write($"FindElement.WindowFindAll.End elapsedMs={Stopwatch.GetElapsedTime(started).TotalMilliseconds:F1}");
+
+                foreach (AutomationElement candidate in candidates)
+                {
+                    try
+                    {
+                        if (processIds.Contains(candidate.Current.ProcessId))
+                        {
+                            sessionCandidates.Add(candidate);
+                        }
+                    }
+                    catch (ElementNotAvailableException)
+                    {
+                    }
                 }
             }
             catch (ElementNotAvailableException)
             {
+                // A top-level window may disappear while the search is in progress.
             }
         }
 
-        if (sessionCandidates.Count == 1) return sessionCandidates[0];
+        if (sessionCandidates.Count == 1)
+        {
+            DiagnosticLog.Write($"FindElement.Unique elapsedMs={Stopwatch.GetElapsedTime(started).TotalMilliseconds:F1}");
+            return sessionCandidates[0];
+        }
+
         if (sessionCandidates.Count == 0) return null;
 
         DiagnosticLog.Write($"FindElement.Ambiguous count={sessionCandidates.Count}");
@@ -583,6 +619,32 @@ public partial class MainWindow : Window
 
         DiagnosticLog.Write($"FindElement.AmbiguousAfterAncestor count={ancestorMatches.Count}");
         return null;
+    }
+
+    private static bool MatchesLeafIdentity(AutomationElement element, ElementIdentity identity)
+    {
+        try
+        {
+            if (element.Current.ControlType != identity.ControlType) return false;
+
+            if (!string.IsNullOrWhiteSpace(identity.AutomationId) &&
+                !string.Equals(element.Current.AutomationId, identity.AutomationId, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(identity.Name) &&
+                !string.Equals(element.Current.Name, identity.Name, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return true;
+        }
+        catch (ElementNotAvailableException)
+        {
+            return false;
+        }
     }
 
     private static bool HasMatchingAncestor(AutomationElement element, AncestorIdentity identity)
