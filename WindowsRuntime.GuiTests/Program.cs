@@ -223,6 +223,7 @@ internal static class Program
 
             Run("17. T07 active dynamic target hides when removed and returns event-driven", () =>
             {
+                PrepareHostTargetForPicker(runtimeWindow, hostWindow, automationId: "AppearingTarget");
                 var target = FindByAutomationId(hostWindow, "AppearingTarget");
                 SelectThroughRealPicker(runtimeWindow, target);
                 Invoke(FindByName(hostWindow, "Toggle dynamic target"));
@@ -249,13 +250,11 @@ internal static class Program
                     return pattern.Current.WindowVisualState == WindowVisualState.Minimized;
                 }, "Second test window did not minimize before authored target selection.");
 
-                // Earlier lifecycle tests may leave the host minimized/restored or
-                // moved. Normalize both windows before arranging them for a real pick.
+                // Earlier lifecycle tests may leave the host scrolled, minimized/restored
+                // or moved. Normalize it through the same public-UIA picker preparation
+                // used by the other authored-target cases.
+                PrepareHostTargetForPicker(runtimeWindow, hostWindow, automationId: "GroupA");
                 var hostHwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
-                var runtimeHwnd = new IntPtr(runtimeWindow.Current.NativeWindowHandle);
-                ShowWindow(hostHwnd, SwRestore);
-                ShowWindow(runtimeHwnd, SwRestore);
-                ArrangeWindowsForPicker(runtimeWindow, hostWindow);
 
                 AutomationElement? authored = null;
                 WaitUntil(() =>
