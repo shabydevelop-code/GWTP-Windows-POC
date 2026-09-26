@@ -239,7 +239,6 @@ internal static class Program
                 Require(secondDuplicate.Current.ProcessId == hostWindow.Current.ProcessId,
                     "Second-window duplicate is not in the same process.");
 
-                var authored = FindAllByAutomationId(hostWindow, "SharedContinue")[0];
                 var secondHwnd = new IntPtr(second.Current.NativeWindowHandle);
                 ShowWindow(secondHwnd, SwMinimize);
                 WaitUntil(() =>
@@ -247,6 +246,20 @@ internal static class Program
                     var pattern = (WindowPattern)second.GetCurrentPattern(WindowPattern.Pattern);
                     return pattern.Current.WindowVisualState == WindowVisualState.Minimized;
                 }, "Second test window did not minimize before authored target selection.");
+
+                // Put the authored host at a deterministic visible position before
+                // taking fresh target bounds. Earlier lifecycle tests intentionally
+                // move this window, so stale/off-screen geometry must not leak here.
+                var hostHwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
+                var hostRect = hostWindow.Current.BoundingRectangle;
+                Require(SetWindowPos(hostHwnd, HwndTop, 120, 120,
+                    (int)hostRect.Width, (int)hostRect.Height, SwpNoactivate),
+                    "Could not arrange authored host for same-process picker test.");
+                WaitUntil(() => hostWindow.Current.BoundingRectangle.Left >= 100 &&
+                                hostWindow.Current.BoundingRectangle.Top >= 100,
+                    "Authored host did not reach deterministic picker position.");
+
+                var authored = FindAllByAutomationId(hostWindow, "SharedContinue")[0];
                 SelectThroughRealPicker(runtimeWindow, authored);
                 ShowWindow(secondHwnd, SwRestore);
                 Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
