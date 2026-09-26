@@ -319,7 +319,18 @@ internal static class Program
                 }, BuildPickerGeometryDiagnostic(hostWindow, authored));
                 SelectThroughRealPicker(runtimeWindow, authored!);
                 ShowWindow(secondHwnd, SwRestore);
+
+                // Restoring the competing window can make it foreground. The runtime
+                // correctly hides guidance whenever the authored host is not foreground,
+                // so explicitly return foreground ownership to the authored host before
+                // asserting target rediscovery. The competing window remains restored
+                // and present in the same process, which preserves the T08 ambiguity.
+                SetForegroundWindow(hostHwnd);
+                WaitUntil(() => GetForegroundWindow() == hostHwnd,
+                    "Authored host did not regain foreground before T08 rediscovery.");
+
                 Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
+                SetForegroundWindow(hostHwnd);
                 WaitUntil(() => IsOverlayAttached(runtime.Id, authored),
                     "Same-process second-window duplicate stole the authored target.");
             });
