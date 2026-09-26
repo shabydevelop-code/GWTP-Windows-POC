@@ -198,12 +198,13 @@ internal static class Program
 
         var hostHwnd = GetAncestorWindowFromElement(target);
         Require(hostHwnd != IntPtr.Zero, "Could not resolve target host window.");
-        Require(SetForegroundWindow(hostHwnd), "Could not bring target host to foreground.");
-        WaitUntil(() => GetForegroundWindow() == hostHwnd,
-            "Target host did not become the foreground window.");
+        // SetForegroundWindow is intentionally best-effort. Windows foreground-lock
+        // policy may reject programmatic activation from the console test process;
+        // that is not a runtime failure and should not make the GUI test fight focus.
+        SetForegroundWindow(hostHwnd);
 
-        // Foreground activation can move/scroll WPF content. Resolve the live target
-        // geometry only after activation, then place the cursor on that geometry.
+        // Resolve live geometry after the activation attempt. The production picker
+        // itself does not require the target application to own foreground.
         var rect = target.Current.BoundingRectangle;
         var x = (int)Math.Round(rect.Left + rect.Width / 2);
         var y = (int)Math.Round(rect.Top + rect.Height / 2);
