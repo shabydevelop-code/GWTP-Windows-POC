@@ -347,6 +347,41 @@ internal static class Program
                 Invoke(FindByName(runtimeWindow, "Open Ambiguity Test"));
                 WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
             });
+
+            Run("Cross-launch rediscovery finds authored target in a new process instance", () =>
+            {
+                var reopenedHost = WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
+                var reopenedTarget = FindTargetWithinGroup(reopenedHost, "GroupA", "SharedContinue");
+                var reopenedHwnd = new IntPtr(reopenedHost.Current.NativeWindowHandle);
+                SetForegroundWindow(reopenedHwnd);
+                Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
+                SetForegroundWindow(reopenedHwnd);
+                WaitUntil(() => IsOverlayAttached(runtime.Id, reopenedTarget),
+                    "Authored target was not rediscovered after the target application restarted.");
+            });
+
+            Run("Two identical app instances fail safely instead of choosing an arbitrary target", () =>
+            {
+                var firstHost = WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
+                using var secondInstance = Process.Start(new ProcessStartInfo(hostExe) { UseShellExecute = true });
+                Require(secondInstance is not null, "Could not start second identical test-host instance.");
+                WaitForWindow(secondInstance!.Id, "GWTP Windows UIA Test Host");
+
+                Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
+                WaitUntil(() => TryFindRuntimeWindow(runtime.Id, "GWTP Guidance") is null &&
+                                TryFindRuntimeWindow(runtime.Id, "GWTP Highlight") is null,
+                    "Runtime chose an arbitrary target while two indistinguishable app instances were available.");
+
+                secondInstance.Kill(true);
+                secondInstance.WaitForExit(LaunchTimeoutMs);
+                var firstHwnd = new IntPtr(firstHost.Current.NativeWindowHandle);
+                SetForegroundWindow(firstHwnd);
+                Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
+                SetForegroundWindow(firstHwnd);
+                var firstTarget = FindTargetWithinGroup(firstHost, "GroupA", "SharedContinue");
+                WaitUntil(() => IsOverlayAttached(runtime.Id, firstTarget),
+                    "Runtime did not recover after the ambiguous second instance closed.");
+            });
         }
         finally
         {
@@ -644,6 +679,31 @@ internal static class Program
     private static AutomationElement? TryFindByAutomationId(AutomationElement root, string id)
         => root.FindFirst(TreeScope.Descendants,
             new PropertyCondition(AutomationElement.AutomationIdProperty, id));
+
+    private static AutomationElement FindTargetWithinGroup(
+        AutomationElement window,
+        string groupAutomationId,
+        string targetAutomationId)
+    {
+        var group = FindByAutomationId(window, groupAutomationId);
+        if (group.TryGetCurrentPattern(ScrollItemPattern.Pattern, out var groupScrollObject) &&
+            groupScrollObject is ScrollItemPattern groupScroll)
+        {
+            groupScroll.ScrollIntoView();
+        }
+
+        var groupRect = group.Current.BoundingRectangle;
+        return FindAllByAutomationId(window, targetAutomationId)
+            .FirstOrDefault(candidate =>
+            {
+                var rect = candidate.Current.BoundingRectangle;
+                if (rect.IsEmpty || rect.Width <= 0 || rect.Height <= 0) return false;
+                var centerX = rect.Left + rect.Width / 2;
+                return centerX >= groupRect.Left && centerX <= groupRect.Right;
+            })
+            ?? throw new InvalidOperationException(
+                $"Target '{targetAutomationId}' was not found inside group '{groupAutomationId}'.");
+    }
 
     private static void Invoke(AutomationElement element)
     {
