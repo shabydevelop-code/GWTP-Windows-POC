@@ -394,3 +394,10 @@ The suite runs against real executables and exercises the public GUI/UIA surface
 This coverage is intentionally scoped to the current POC/runtime capabilities. Additional end-to-end coverage belongs to the integration stage after the production Windows target descriptor and persistence model are finalized. That later layer should cover DB persistence, GWTP restart with persisted targets, Editor save/Preview/Learner execution, Web-only/Windows-only/Hybrid guides, Web-to-Windows handoff, and validation in representative production environments such as Citrix and actual target applications.
 
 Conclusion for the current milestone: target selection, tracking, rediscovery, lifecycle handling, and ambiguity safety have sufficient automated evidence to proceed from generic POC hardening to defining the production Windows Target Descriptor. The experimental POC identity must still not be copied verbatim into the production schema without that design step.
+
+
+## Production descriptor handoff — 2026-09-26
+- The descriptor-design milestone is complete. The main GWTP repository now contains the frozen first production contract in `WINDOWS_TARGET_DESCRIPTOR.md`.
+- The production descriptor uses ProcessName + Window descriptor + Element descriptor + ordered ancestor path. AutomationId is preferred over Name; Name becomes strict only when AutomationId is absent. This intentionally fixes the dynamic-Name limitation demonstrated by T05 rather than persisting the POC matching behavior unchanged.
+- Transient PID/HWND/SessionId/bounds/RuntimeId are excluded from persistence; ambiguity continues to fail safe/pending.
+- The existing Windows GUI baseline remains **21/21 green**. Next work moves to the main GWTP integration slice (DB/API/Editor/runtime). Additional POC changes are only required if integration exposes a concrete missing runtime capability.
