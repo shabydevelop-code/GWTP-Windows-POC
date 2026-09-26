@@ -45,7 +45,16 @@ internal static class Program
 
             Run("T03 TextBox without authored AutomationId remains selectable in GUI", () =>
             {
-                var target = FindByName(hostWindow, "No automation id");
+                var edits = hostWindow.FindAll(
+                    TreeScope.Descendants,
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
+
+                var target = edits.Cast<AutomationElement>()
+                    .SingleOrDefault(element =>
+                        string.IsNullOrEmpty(element.Current.AutomationId) &&
+                        element.Current.BoundingRectangle.Top > 0);
+
+                Require(target is not null, "No TextBox without AutomationId was exposed through UIA.");
                 Require(target.Current.ControlType == ControlType.Edit, "No-id textbox is not exposed as Edit.");
             });
 
@@ -101,8 +110,26 @@ internal static class Program
 
     private static void Run(string name, Action test)
     {
-        try { test(); _passed++; Console.WriteLine($"PASS  {name}"); }
-        catch (Exception ex) { _failed++; Console.WriteLine($"FAIL  {name} — {ex.Message}"); }
+        try
+        {
+            test();
+            _passed++;
+            WriteResult("PASS", name, ConsoleColor.Green);
+        }
+        catch (Exception ex)
+        {
+            _failed++;
+            WriteResult("FAIL", $"{name} — {ex.Message}", ConsoleColor.Red);
+        }
+    }
+
+    private static void WriteResult(string status, string message, ConsoleColor color)
+    {
+        var previous = Console.ForegroundColor;
+        Console.ForegroundColor = color;
+        Console.Write(status);
+        Console.ForegroundColor = previous;
+        Console.WriteLine($"  {message}");
     }
 
     private static AutomationElement WaitForWindow(int processId, string name)
