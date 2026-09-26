@@ -91,6 +91,36 @@ internal static class Program
                     "Overlays did not reattach after Restore.");
             });
 
+            Run("Stress Previous/Next with repeated Minimize/Restore stays attached", () =>
+            {
+                var targets = FindAllByAutomationId(hostWindow, "SharedContinue");
+                Require(targets.Count == 2, "Expected two SharedContinue targets for stress test.");
+                var hwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
+
+                for (var cycle = 0; cycle < 10; cycle++)
+                {
+                    var guidance = WaitForRuntimeWindow(runtime.Id, "GWTP Guidance");
+                    Invoke(FindByName(guidance, "Previous"));
+                    WaitUntil(() => IsOverlayAttached(runtime.Id, targets[0]),
+                        $"Stress cycle {cycle + 1}: Previous did not attach to Group A.");
+
+                    guidance = WaitForRuntimeWindow(runtime.Id, "GWTP Guidance");
+                    Invoke(FindByName(guidance, "Next"));
+                    WaitUntil(() => IsOverlayAttached(runtime.Id, targets[1]),
+                        $"Stress cycle {cycle + 1}: Next did not attach to Group B.");
+
+                    ShowWindow(hwnd, SwMinimize);
+                    WaitUntil(() => TryFindRuntimeWindow(runtime.Id, "GWTP Guidance") is null &&
+                                    TryFindRuntimeWindow(runtime.Id, "GWTP Highlight") is null,
+                        $"Stress cycle {cycle + 1}: overlays remained visible while minimized.");
+
+                    ShowWindow(hwnd, SwRestore);
+                    SetForegroundWindow(hwnd);
+                    WaitUntil(() => IsOverlayAttached(runtime.Id, targets[1]),
+                        $"Stress cycle {cycle + 1}: overlays did not reattach after Restore.");
+                }
+            });
+
             Run("Foreground loss hides overlays and returning to host restores them", () =>
             {
                 var target = FindAllByAutomationId(hostWindow, "SharedContinue")[1];
