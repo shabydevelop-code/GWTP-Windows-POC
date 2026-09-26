@@ -8,6 +8,7 @@ internal static class Program
 {
     private const int TimeoutMs = 3000;
     private const int LaunchTimeoutMs = 10000;
+    private const int HumanStepPauseMs = 500;
     private static int _passed;
     private static int _failed;
 
@@ -252,6 +253,7 @@ internal static class Program
 
         mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
         ShowWindow(runtimeHwnd, SwShowNoActivate);
+        Thread.Sleep(HumanStepPauseMs);
 
         // Do not let a failed/late synthetic click leak selection mode into the next test.
         mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
@@ -374,6 +376,7 @@ internal static class Program
         try
         {
             test();
+            Thread.Sleep(HumanStepPauseMs);
             _passed++;
             WriteResult("PASS", name, ConsoleColor.Green);
         }
