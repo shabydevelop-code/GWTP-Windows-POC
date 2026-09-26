@@ -334,3 +334,13 @@ Manual verification of Restore behavior is still required after pulling this cha
 - A real foreground-lifecycle defect was found and fixed: WinEvent hooks used WINEVENT_SKIPOWNPROCESS, which suppressed the foreground event when the unrelated foreground window was the GWTP runtime itself. Foreground observation now includes own-process events, and the tracker evaluates current foreground state before deciding whether overlays should be visible.
 - GUI test synchronization remains state-based. Visual pacing is currently retained around the physical picker flow to make desktop behavior observable during local regression runs; it is test-only and does not introduce polling or fixed delays into production runtime behavior.
 - This supersedes the previous pending-first-run Windows GUI sanity/overlay lifecycle status. Current verified Windows GUI baseline: **14/14**.
+
+
+## Windows GUI descriptor hardening — 2026-09-26
+- Verified baseline before this expansion: **19 passed, 0 failed** in `run-sanity.ps1`.
+- T08 now proves that an authored target is scoped by the captured native top-level window and is not stolen by a duplicate leaf in another window of the same process.
+- Target rediscovery remains scoped to the **current Windows SessionId** at runtime. SessionId is a runtime boundary, not persisted target identity; this is required for multi-user/Citrix hosts.
+- Added GUI coverage for **cross-launch rediscovery**: an authored target must be rediscovered after the target application closes and starts in a new process instance.
+- Added GUI coverage for **two indistinguishable application instances in the same Windows session**: the runtime must fail safely/pending rather than choose an arbitrary target, then recover after ambiguity is removed.
+- Added deterministic test-host scenarios for a recreated UIA target and a dynamic top-level window title for the next descriptor-hardening tests.
+- The expanded suite has not yet been recorded as green; run `run-sanity.ps1` and record the new baseline only after all new tests pass.
