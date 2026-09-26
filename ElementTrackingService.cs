@@ -22,6 +22,7 @@ internal sealed class ElementTrackingService : IDisposable
     private WinEventDelegate? _winEventDelegate;
     private Process? _hostProcess;
     private bool _disposed;
+    private int _refreshInProgress;
 
     public event Action<Rect>? BoundsChanged;
     public event Action? ElementTemporarilyHidden;
@@ -37,7 +38,7 @@ internal sealed class ElementTrackingService : IDisposable
 
     public void Start()
     {
-        RefreshBounds();
+        RequestBoundsRefresh();
 
         try
         {
@@ -131,7 +132,7 @@ internal sealed class ElementTrackingService : IDisposable
 
     private void OnAutomationPropertyChanged(object sender, AutomationPropertyChangedEventArgs e)
     {
-        _dispatcher.BeginInvoke(RefreshBounds);
+        RequestBoundsRefresh();
     }
 
     private void OnWinEvent(
@@ -155,7 +156,7 @@ internal sealed class ElementTrackingService : IDisposable
                 if (IsHostWindowEvent(hwnd))
                 {
                     HostActivated?.Invoke();
-                    RefreshBounds();
+                    RequestBoundsRefresh();
                 }
                 else
                 {
@@ -189,13 +190,13 @@ internal sealed class ElementTrackingService : IDisposable
 
         if (eventType == EventSystemMinimizeEnd && IsHostWindowEvent(hwnd))
         {
-            _dispatcher.BeginInvoke(RefreshBounds);
+            RequestBoundsRefresh();
             return;
         }
 
         if (eventType == EventObjectLocationChange && (hwnd == _hostWindow || IsChild(_hostWindow, hwnd)))
         {
-            _dispatcher.BeginInvoke(RefreshBounds);
+            RequestBoundsRefresh();
         }
     }
 
@@ -246,34 +247,64 @@ internal sealed class ElementTrackingService : IDisposable
         }
     }
 
-    private void RefreshBounds()
+    private void RequestBoundsRefresh()
     {
+        if (_disposed || Interlocked.Exchange(ref _refreshInProgress, 1) != 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(ReadBoundsOffUiThread);
+    }
+
+    private void ReadBoundsOffUiThread()
+    {
+        Rect bounds = Rect.Empty;
+        var temporarilyHidden = false;
+        var unavailable = false;
+
+        try
+        {
+            bounds = _element.Current.BoundingRectangle;
+            var isOffscreen = _element.Current.IsOffscreen;
+            temporarilyHidden = isOffscreen || bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0;
+        }
+        catch (ElementNotAvailableException)
+        {
+            unavailable = true;
+        }
+        catch
+        {
+            unavailable = true;
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _refreshInProgress, 0);
+        }
+
         if (_disposed)
         {
             return;
         }
 
-        try
+        _dispatcher.BeginInvoke(() =>
         {
-            var bounds = _element.Current.BoundingRectangle;
-            var isOffscreen = _element.Current.IsOffscreen;
+            if (_disposed) return;
 
-            if (isOffscreen || bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
+            if (unavailable)
+            {
+                NotifyUnavailable();
+                return;
+            }
+
+            if (temporarilyHidden)
             {
                 ElementTemporarilyHidden?.Invoke();
                 return;
             }
 
             BoundsChanged?.Invoke(bounds);
-        }
-        catch (ElementNotAvailableException)
-        {
-            NotifyUnavailable();
-        }
-        catch
-        {
-            NotifyUnavailable();
-        }
+        });
     }
 
     private void NotifyUnavailable()
