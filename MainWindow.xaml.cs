@@ -71,8 +71,27 @@ public partial class MainWindow : Window
 
     private void OpenAmbiguityTestButton_Click(object sender, RoutedEventArgs e)
     {
-        var testWindow = new AmbiguityTestWindow();
-        testWindow.Show();
+        try
+        {
+            var projectPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "..", "..", "..", "AmbiguityTestHost", "AmbiguityTestHost.csproj");
+
+            projectPath = Path.GetFullPath(projectPath);
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = $"run --project \"{projectPath}\"",
+                UseShellExecute = true
+            });
+
+            StatusText.Text = "Opening external ambiguity test host.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Could not open ambiguity test host: {ex.Message}";
+        }
     }
 
     private void UpdateTrackedHighlight(bool showFoundStatus)
