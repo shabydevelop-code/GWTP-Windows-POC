@@ -219,3 +219,11 @@ Manual verification of Restore behavior is still required after pulling this cha
 3. A separate step runtime/platform model is required in the main GWTP data/API model; existing TargetType must remain element/none.
 4. Secure learner/token handoff between the browser extension and Windows runtime remains to be designed.
 5. After Windows targeting is hardened, implement the first production-compatible WEB -> WINDOWS -> WEB integration slice.
+
+## Shared target-model review — 2026-09-26
+- Main GWTP Web GuideStep and the Windows runtime target identity were reviewed together before integration/schema work.
+- Runtime belongs to GuideStep (`web` / `windows`) and remains separate from `TargetType=element|none`.
+- Runtime-neutral fields are order/instruction/screen/target type/validation; element target descriptors are runtime-specific.
+- Current Windows `ElementIdentity` provides ProcessName + AutomationId + Name + ControlType and rediscovery is already scoped to the runtime's current SessionId.
+- This identity is deliberately not being promoted to the persisted production DTO yet: hierarchy/fallback identity remains the next design/hardening task.
+- No temporary runtime-only DB field or CSS-selector reuse was introduced. After Windows target identity is hardened, main GWTP can add runtime + typed target persistence/API/Editor support as one coherent integration slice.
