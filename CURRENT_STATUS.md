@@ -243,3 +243,8 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Refresh requests are coalesced so UIA property/location/foreground events cannot create parallel bounds-read work while one cross-process read is still outstanding.
 - This change does not infer host closure, add polling, or change the existing definitive HIDE/DESTROY/Process.Exited lifecycle contract. Its purpose is to keep GWTP responsive even when a UIA provider stalls.
 - Manual verification required: track a Notepad element, close Notepad, immediately interact with/move the GWTP window during the previous delay interval, and observe whether the runtime stays responsive. Also verify normal move/minimize/restore tracking remains correct.
+
+## Host-shutdown freeze diagnostic — 2026-09-26
+- Manual verification after moving BoundingRectangle/IsOffscreen reads off the WPF Dispatcher showed that GWTP still freezes while Notepad is closing. Therefore synchronous bounds reads were not the sole cause.
+- No second speculative behavioral fix was introduced. Targeted persistent diagnostics were added around UIA property callbacks, foreground Dispatcher work, unavailable notification, tracker disposal, and specifically Automation.RemoveAutomationPropertyChangedEventHandler.
+- Next reproduction should inspect the last Begin/End pair in windows-runtime.log to identify the exact blocking boundary before changing lifecycle architecture.
