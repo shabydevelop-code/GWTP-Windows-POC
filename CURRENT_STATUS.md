@@ -410,3 +410,7 @@ Conclusion for the current milestone: target selection, tracking, rediscovery, l
 - Added `WindowsTargetDescriptorFactory` that emits ProcessName, top-level Window descriptor, Element descriptor, and ordered nearest-to-farthest meaningful ancestors. Transient PID/HWND/SessionId/bounds/RuntimeId are not serialized.
 - Added per-user Chrome/Edge host registration scripts (`install-native-host.ps1` and `install-native-host.bat`) requiring the explicit extension ID.
 - Existing 21/21 Windows GUI baseline predates these changes. Build, native-host registration, real Editor-to-picker round trip, and the full Windows GUI regression must be run before this bridge is marked verified.
+
+
+## RETIRED FROM ACTIVE DEVELOPMENT — 2026-09-26
+This repository is no longer a GWTP source of truth. The Windows runtime, UIA Test Host, GUI/E2E suite and Native Messaging work were consolidated into `shabydevelop-code/Generic-Web-Training-Platform` under `windows-runtime/`. Do not implement new product changes here. This repository is retained temporarily only as historical/POC reference until the consolidated 21-test Windows baseline is re-verified in the main repository.
