@@ -34,12 +34,12 @@ internal static class Program
         {
             if (selectedTests is not null && selectedTests.SetEquals(new[] { 20 }))
             {
-                var runtimeWindow = WaitForWindow(runtime.Id, "GWTP Windows POC");
-                Invoke(FindByName(runtimeWindow, "Open Ambiguity Test"));
+                var focusedRuntimeWindow = WaitForWindow(runtime.Id, "GWTP Windows POC");
+                Invoke(FindByName(focusedRuntimeWindow, "Open Ambiguity Test"));
                 var authoredHost = WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
-                PrepareHostTargetForPicker(runtimeWindow, authoredHost, automationId: "GroupA");
+                PrepareHostTargetForPicker(focusedRuntimeWindow, authoredHost, automationId: "GroupA");
                 var authoredTarget = FindTargetWithinGroup(authoredHost, "GroupA", "SharedContinue");
-                SelectThroughRealPicker(runtimeWindow, authoredTarget);
+                SelectThroughRealPicker(focusedRuntimeWindow, authoredTarget);
                 WaitUntil(() => IsOverlayAttached(runtime.Id, authoredTarget),
                     "Focused setup could not author the cross-launch target.");
 
@@ -47,7 +47,7 @@ internal static class Program
                 SendMessage(authoredHwnd, WmClose, IntPtr.Zero, IntPtr.Zero);
                 WaitUntil(() => TryFindTopLevelWindow("GWTP Windows UIA Test Host") is null,
                     "Focused setup host did not close.");
-                Invoke(FindByName(runtimeWindow, "Open Ambiguity Test"));
+                Invoke(FindByName(focusedRuntimeWindow, "Open Ambiguity Test"));
                 WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
 
                 Run("20. Cross-launch rediscovery finds authored target in a new process instance", () =>
@@ -68,7 +68,7 @@ internal static class Program
                     var reopenedTarget = FindTargetWithinGroup(reopenedHost, "GroupA", "SharedContinue");
                     var reopenedHwnd = new IntPtr(reopenedHost.Current.NativeWindowHandle);
                     SetForegroundWindow(reopenedHwnd);
-                    Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
+                    Invoke(FindByAutomationId(focusedRuntimeWindow, "FindElementButton"));
                     SetForegroundWindow(reopenedHwnd);
                     WaitUntil(() => IsOverlayAttached(runtime.Id, reopenedTarget),
                         "Authored target was not rediscovered after the target application restarted.");
