@@ -16,6 +16,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        var selectedTests = ParseSelectedTests(args);
         var root = FindRepoRoot();
         var runtimeExe = Path.Combine(root, "bin", "Debug", "net8.0-windows", "GWTP-Windows-POC.exe");
         var hostExe = Path.Combine(root, "AmbiguityTestHost", "bin", "Debug", "net8.0-windows", "AmbiguityTestHost.exe");
@@ -30,7 +31,54 @@ internal static class Program
         if (runtime is null) return 2;
 
         try
-        {
+              if (selectedTests is not null && selectedTests.SetEquals(new[] { 20 }))
+            {
+                var runtimeWindow = WaitForWindow(runtime.Id, "GWTP Windows POC");
+                Invoke(FindByName(runtimeWindow, "Open Ambiguity Test"));
+                var authoredHost = WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
+                PrepareHostTargetForPicker(runtimeWindow, authoredHost, automationId: "GroupA");
+                var authoredTarget = FindTargetWithinGroup(authoredHost, "GroupA", "SharedContinue");
+                SelectThroughRealPicker(runtimeWindow, authoredTarget);
+                WaitUntil(() => IsOverlayAttached(runtime.Id, authoredTarget),
+                    "Focused setup could not author the cross-launch target.");
+
+                var authoredHwnd = new IntPtr(authoredHost.Current.NativeWindowHandle);
+                SendMessage(authoredHwnd, WmClose, IntPtr.Zero, IntPtr.Zero);
+                WaitUntil(() => TryFindTopLevelWindow("GWTP Windows UIA Test Host") is null,
+                    "Focused setup host did not close.");
+                Invoke(FindByName(runtimeWindow, "Open Ambiguity Test"));
+                WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
+
+                Run("20. Cross-launch rediscovery finds authored target in a new process instance", () =>
+                {
+                    WaitUntil(() => Process.GetProcessesByName("AmbiguityTestHost").Length == 1,
+                        "Previous test-host process did not exit before cross-launch rediscovery.",
+                        LaunchTimeoutMs);
+                    var reopenedHost = WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
+                    var scenarioScroll = TryFindByAutomationId(reopenedHost, "ScenarioScrollViewer");
+                    if (scenarioScroll is not null &&
+                        scenarioScroll.TryGetCurrentPattern(ScrollPattern.Pattern, out var reopenedScrollObject) &&
+                        reopenedScrollObject is ScrollPattern reopenedScroll &&
+                        reopenedScroll.Current.VerticallyScrollable)
+                    {
+                        reopenedScroll.SetScrollPercent(ScrollPattern.NoScroll, 0);
+                    }
+
+                    var reopenedTarget = FindTargetWithinGroup(reopenedHost, "GroupA", "SharedContinue");
+                    var reopenedHwnd = new IntPtr(reopenedHost.Current.NativeWindowHandle);
+                    SetForegroundWindow(reopenedHwnd);
+                    Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
+                    SetForegroundWindow(reopenedHwnd);
+                    WaitUntil(() => IsOverlayAttached(runtime.Id, reopenedTarget),
+                        "Authored target was not rediscovered after the target application restarted.");
+                });
+
+                Console.WriteLine();
+                Console.WriteLine($"Windows GUI sanity: {_passed} passed, {_failed} failed");
+                return _failed == 0 ? 0 : 1;
+            }
+
+      {
             var runtimeWindow = WaitForWindow(runtime.Id, "GWTP Windows POC");
             Run("01. Open UIA Test Host through GUI", () =>
             {
@@ -634,6 +682,25 @@ internal static class Program
         var rect = window.Current.BoundingRectangle;
         Require(SetWindowPos(hwnd, IntPtr.Zero, (int)rect.Left + dx, (int)rect.Top + dy,
             (int)rect.Width, (int)rect.Height, SwpNozorder | SwpNoactivate), "Could not move host window.");
+    }
+
+    private static HashSet<int>? ParseSelectedTests(string[] args)
+    {
+        if (args.Length == 0) return null;
+
+        var selected = new HashSet<int>();
+        foreach (var arg in args)
+        {
+            foreach (var part in arg.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (!int.TryParse(part, out var number) || number < 1 || number > 21)
+                {
+                    throw new ArgumentException($"Invalid test number '{part}'. Expected 1-21.");
+                }
+                selected.Add(number);
+            }
+        }
+        return selected;
     }
 
     private static void Run(string name, Action test)
