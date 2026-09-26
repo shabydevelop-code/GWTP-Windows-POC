@@ -266,7 +266,7 @@ internal static class Program
                         (int)Math.Round(rect.Left + rect.Width / 2),
                         (int)Math.Round(rect.Top + rect.Height / 2));
                     return Forms.Screen.AllScreens.Any(screen => screen.Bounds.Contains(center));
-                }, "Authored target did not reach a physically accessible picker position.");
+                }, BuildPickerGeometryDiagnostic(hostWindow, authored));
                 SelectThroughRealPicker(runtimeWindow, authored!);
                 ShowWindow(secondHwnd, SwRestore);
                 Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
@@ -451,6 +451,37 @@ internal static class Program
         Require(SetWindowPos(hostHwnd, IntPtr.Zero, hostX, hostY,
             (int)host.Width, (int)host.Height, SwpNozorder | SwpNoactivate),
             "Could not position target host window.");
+    }
+
+    private static string BuildPickerGeometryDiagnostic(
+        AutomationElement hostWindow,
+        AutomationElement? target)
+    {
+        string RectText(System.Windows.Rect rect)
+            => $"L={rect.Left:F1},T={rect.Top:F1},R={rect.Right:F1},B={rect.Bottom:F1},W={rect.Width:F1},H={rect.Height:F1}";
+
+        var hostRect = hostWindow.Current.BoundingRectangle;
+        var targetText = target is null
+            ? "<not found>"
+            : RectText(target.Current.BoundingRectangle);
+        var visualState = "<unavailable>";
+        try
+        {
+            var pattern = (WindowPattern)hostWindow.GetCurrentPattern(WindowPattern.Pattern);
+            visualState = pattern.Current.WindowVisualState.ToString();
+        }
+        catch { }
+
+        var screens = string.Join(" | ", Forms.Screen.AllScreens.Select((screen, index) =>
+            $"Screen{index}[Bounds={screen.Bounds}; WorkingArea={screen.WorkingArea}; Primary={screen.Primary}]"));
+
+        var cursor = GetCursorPos(out var point)
+            ? $"X={point.X},Y={point.Y}"
+            : "<unavailable>";
+
+        return $"Authored target did not reach a physically accessible picker position. " +
+               $"Host={RectText(hostRect)}; HostState={visualState}; Target={targetText}; " +
+               $"Cursor={cursor}; Screens={screens}";
     }
 
     private static bool IsCursorInside(System.Windows.Rect rect)
