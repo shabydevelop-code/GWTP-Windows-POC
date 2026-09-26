@@ -258,7 +258,11 @@ internal static class Program
                 AutomationElement? authored = null;
                 WaitUntil(() =>
                 {
-                    authored = FindAllByAutomationId(hostWindow, "SharedContinue").FirstOrDefault();
+                    // Query the main host by its distinguishing Group A ancestor.
+                    // A process-wide AutomationId lookup is intentionally ambiguous now
+                    // because T08 adds another SharedContinue in the second window.
+                    var groupA = FindByAutomationId(hostWindow, "GroupA");
+                    authored = FindAllByAutomationId(groupA, "SharedContinue").FirstOrDefault();
                     if (authored is null) return false;
                     var rect = authored.Current.BoundingRectangle;
                     if (rect.IsEmpty || rect.Width <= 0 || rect.Height <= 0) return false;
