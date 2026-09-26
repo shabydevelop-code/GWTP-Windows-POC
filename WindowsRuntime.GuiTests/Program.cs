@@ -193,14 +193,19 @@ internal static class Program
     private static void SelectThroughRealPicker(AutomationElement runtimeWindow, AutomationElement target)
     {
         Invoke(FindByAutomationId(runtimeWindow, "SelectElementButton"));
-        Thread.Sleep(150);
+        WaitUntil(() => FindByAutomationId(runtimeWindow, "SelectElementButton").Current.Name == "Cancel",
+            "Picker did not enter selection mode.");
+
         var rect = target.Current.BoundingRectangle;
         var x = (int)Math.Round(rect.Left + rect.Width / 2);
         var y = (int)Math.Round(rect.Top + rect.Height / 2);
         SetCursorPos(x, y);
-        Thread.Sleep(100);
+
+        // The production picker samples physical mouse state on its DispatcherTimer.
+        // Hold the button long enough for at least one 40 ms picker tick to observe
+        // the down transition, then release it like a real desktop click.
         mouse_event(MouseeventfLeftdown, 0, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(80);
+        Thread.Sleep(120);
         mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
         WaitUntil(() =>
         {
