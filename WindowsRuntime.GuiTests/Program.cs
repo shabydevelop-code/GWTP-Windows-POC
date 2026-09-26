@@ -36,6 +36,7 @@ internal static class Program
             });
 
             var hostWindow = WaitForTopLevelWindow("GWTP Windows UIA Test Host");
+            ArrangeWindowsForPicker(runtimeWindow, hostWindow);
 
             Run("T01 picker selects duplicate target A and shows attached overlays", () =>
             {
@@ -267,6 +268,42 @@ internal static class Program
 
     private static void AssertOverlayAttached(int runtimeProcessId, AutomationElement target)
         => Require(IsOverlayAttached(runtimeProcessId, target), "Highlight/guidance are not attached to the selected target.");
+
+    private static void ArrangeWindowsForPicker(AutomationElement runtimeWindow, AutomationElement hostWindow)
+    {
+        var work = Forms.Screen.PrimaryScreen.WorkingArea;
+        var runtime = runtimeWindow.Current.BoundingRectangle;
+        var host = hostWindow.Current.BoundingRectangle;
+
+        var runtimeHwnd = new IntPtr(runtimeWindow.Current.NativeWindowHandle);
+        var hostHwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
+
+        // Put the runtime and authored target host in separate visible regions.
+        // A real picker click cannot select a control that is physically covered by GWTP.
+        var runtimeX = work.Left + 20;
+        var runtimeY = work.Top + 20;
+        Require(SetWindowPos(runtimeHwnd, IntPtr.Zero, runtimeX, runtimeY,
+            (int)runtime.Width, (int)runtime.Height, SwpNozorder | SwpNoactivate),
+            "Could not position runtime window.");
+
+        var hostX = Math.Min(
+            work.Right - (int)host.Width - 20,
+            runtimeX + (int)runtime.Width + 40);
+        var hostY = work.Top + 20;
+
+        // If the screen is too narrow for side-by-side placement, put the host below.
+        if (hostX < runtimeX + runtime.Width)
+        {
+            hostX = work.Left + 20;
+            hostY = Math.Min(
+                work.Bottom - (int)host.Height - 20,
+                runtimeY + (int)runtime.Height + 40);
+        }
+
+        Require(SetWindowPos(hostHwnd, IntPtr.Zero, hostX, hostY,
+            (int)host.Width, (int)host.Height, SwpNozorder | SwpNoactivate),
+            "Could not position target host window.");
+    }
 
     private static bool IsCursorInside(System.Windows.Rect rect)
     {
