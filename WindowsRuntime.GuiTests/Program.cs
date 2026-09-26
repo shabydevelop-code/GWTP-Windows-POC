@@ -32,6 +32,51 @@ internal static class Program
 
         try
         {
+            if (selectedTests is not null && selectedTests.SetEquals(new[] { 18 }))
+            {
+                var focusedRuntimeWindow = WaitForWindow(runtime.Id, "GWTP Windows POC");
+                Invoke(FindByName(focusedRuntimeWindow, "Open Ambiguity Test"));
+                var focusedHostWindow = WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
+
+                Invoke(FindByName(focusedHostWindow, "Open second test window"));
+                var focusedSecondWindow = WaitForTopLevelWindow("GWTP UIA Test Host — Second Window", LaunchTimeoutMs);
+                var focusedSecondDuplicate = FindByAutomationId(focusedSecondWindow, "SharedContinue");
+                Require(focusedSecondDuplicate.Current.ProcessId == focusedHostWindow.Current.ProcessId,
+                    "Focused T08 setup did not create the duplicate in the same process.");
+
+                var focusedSecondHwnd = new IntPtr(focusedSecondWindow.Current.NativeWindowHandle);
+                ShowWindow(focusedSecondHwnd, SwMinimize);
+                WaitUntil(() =>
+                {
+                    var pattern = (WindowPattern)focusedSecondWindow.GetCurrentPattern(WindowPattern.Pattern);
+                    return pattern.Current.WindowVisualState == WindowVisualState.Minimized;
+                }, "Focused T08 setup could not minimize the second window.");
+
+                PrepareHostTargetForPicker(focusedRuntimeWindow, focusedHostWindow, automationId: "GroupA");
+                var focusedAuthored = FindTargetWithinGroup(focusedHostWindow, "GroupA", "SharedContinue");
+                SelectThroughRealPicker(focusedRuntimeWindow, focusedAuthored);
+                WaitUntil(() => IsOverlayAttached(runtime.Id, focusedAuthored),
+                    "Focused T08 setup could not author the main-window duplicate.");
+
+                Run("18. T08 duplicate leaf in second same-process window does not steal authored target", () =>
+                {
+                    var hostHwnd = new IntPtr(focusedHostWindow.Current.NativeWindowHandle);
+                    ShowWindow(focusedSecondHwnd, SwRestore);
+                    SetForegroundWindow(hostHwnd);
+                    WaitUntil(() => GetForegroundWindow() == hostHwnd,
+                        "Authored host did not regain foreground before focused T08 rediscovery.");
+
+                    Invoke(FindByAutomationId(focusedRuntimeWindow, "FindElementButton"));
+                    SetForegroundWindow(hostHwnd);
+                    WaitUntil(() => IsOverlayAttached(runtime.Id, focusedAuthored),
+                        "Same-process second-window duplicate stole the authored target.");
+                });
+
+                Console.WriteLine();
+                Console.WriteLine($"Windows GUI sanity: {_passed} passed, {_failed} failed");
+                return _failed == 0 ? 0 : 1;
+            }
+
             if (selectedTests is not null && selectedTests.SetEquals(new[] { 20 }))
             {
                 var focusedRuntimeWindow = WaitForWindow(runtime.Id, "GWTP Windows POC");
