@@ -9,6 +9,7 @@ internal static class Program
     private const int TimeoutMs = 3000;
     private const int LaunchTimeoutMs = 10000;
     private const int HumanStepPauseMs = 500;
+    private const int VisualPickerPauseMs = 2000;
     private static int _passed;
     private static int _failed;
 
@@ -198,6 +199,7 @@ internal static class Program
         Invoke(FindByAutomationId(runtimeWindow, "SelectElementButton"));
         WaitUntil(() => FindByAutomationId(runtimeWindow, "SelectElementButton").Current.Name == "Cancel",
             "Picker did not enter selection mode.");
+        Thread.Sleep(VisualPickerPauseMs);
 
         var hostHwnd = GetAncestorWindowFromElement(target);
         Require(hostHwnd != IntPtr.Zero, "Could not resolve target host window.");
@@ -216,6 +218,7 @@ internal static class Program
         var y = (int)Math.Round(rect.Top + rect.Height / 2);
         Require(SetCursorPos(x, y), "Could not move cursor to target.");
         WaitUntil(() => IsCursorInside(rect), "Cursor did not reach target bounds.");
+        Thread.Sleep(VisualPickerPauseMs);
         WaitUntil(() =>
         {
             var atPoint = AutomationElement.FromPoint(new System.Windows.Point(x, y));
@@ -253,7 +256,7 @@ internal static class Program
 
         mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
         ShowWindow(runtimeHwnd, SwShowNoActivate);
-        Thread.Sleep(HumanStepPauseMs);
+        Thread.Sleep(VisualPickerPauseMs);
 
         // Do not let a failed/late synthetic click leak selection mode into the next test.
         mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
