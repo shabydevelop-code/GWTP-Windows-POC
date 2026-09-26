@@ -218,12 +218,14 @@ public partial class MainWindow : Window
     {
         if (_currentTestStepIndex < 0 || _currentTestStepIndex >= _testSteps.Count) return;
 
+        DiagnosticLog.Write($"StepTransition.Begin index={_currentTestStepIndex}");
         StopPendingTargetWait();
         _selectedIdentity = _testSteps[_currentTestStepIndex];
         _guidanceWindow?.SetValidationMessage(null);
         UpdateTrackedHighlight(showFoundStatus: false);
         UpdateGuidanceNavigationState();
         StatusText.Text = $"Showing test step {_currentTestStepIndex + 1} of {_testSteps.Count}.";
+        DiagnosticLog.Write($"StepTransition.End index={_currentTestStepIndex}");
     }
 
     private void WaitForCurrentTestStepTarget()
@@ -494,6 +496,7 @@ public partial class MainWindow : Window
 
     private static AutomationElement? FindElement(ElementIdentity identity)
     {
+        var started = Stopwatch.GetTimestamp();
         DiagnosticLog.Write("FindElement.Begin");
         var root = AutomationElement.RootElement;
         var currentSessionId = Process.GetCurrentProcess().SessionId;
@@ -540,7 +543,7 @@ public partial class MainWindow : Window
         var candidates = root.FindAll(
             TreeScope.Descendants,
             new AndCondition(conditions.ToArray()));
-        DiagnosticLog.Write("FindElement.RootFindAll.End");
+        DiagnosticLog.Write($"FindElement.RootFindAll.End elapsedMs={Stopwatch.GetElapsedTime(started).TotalMilliseconds:F1}");
 
         var sessionCandidates = new List<AutomationElement>();
         foreach (AutomationElement candidate in candidates)
@@ -574,7 +577,7 @@ public partial class MainWindow : Window
 
         if (ancestorMatches.Count == 1)
         {
-            DiagnosticLog.Write("FindElement.ResolvedByAncestor");
+            DiagnosticLog.Write($"FindElement.ResolvedByAncestor elapsedMs={Stopwatch.GetElapsedTime(started).TotalMilliseconds:F1}");
             return ancestorMatches[0];
         }
 
