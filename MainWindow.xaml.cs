@@ -279,6 +279,7 @@ public partial class MainWindow : Window
 
     private void OnTrackedElementBoundsChanged(Rect bounds)
     {
+        DiagnosticLog.Write($"Tracker.BoundsChanged bounds={bounds.Left:F0},{bounds.Top:F0},{bounds.Width:F0},{bounds.Height:F0}");
         _highlightWindow ??= new HighlightWindow();
         _highlightWindow.ShowAt(bounds);
 
@@ -288,6 +289,7 @@ public partial class MainWindow : Window
 
     private void OnTrackedElementTemporarilyHidden()
     {
+        DiagnosticLog.Write("Tracker.TemporarilyHidden");
         CloseHighlight();
 
         if (_guidanceWindow is not null)
@@ -433,6 +435,9 @@ public partial class MainWindow : Window
                 return;
             }
 
+            DiagnosticLog.Write(
+                $"Picker.Captured name='{element.Current.Name}' automationId='{element.Current.AutomationId}' " +
+                $"controlType='{element.Current.ControlType?.ProgrammaticName}' processId={element.Current.ProcessId}");
             _selectedIdentity = CreateIdentity(element);
             _testSteps.Add(_selectedIdentity);
             _currentTestStepIndex = _testSteps.Count - 1;
