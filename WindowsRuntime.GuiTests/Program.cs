@@ -209,9 +209,10 @@ internal static class Program
             Run("T05 dynamic Name exposes current descriptor limitation after authored selection", () =>
             {
                 var target = FindByAutomationId(hostWindow, "DynamicNameTarget");
+                var authoredName = target.Current.Name;
                 SelectThroughRealPicker(runtimeWindow, target);
                 Invoke(FindByName(hostWindow, "Change target name"));
-                WaitUntil(() => FindByAutomationId(hostWindow, "DynamicNameTarget").Current.Name != target.Current.Name,
+                WaitUntil(() => FindByAutomationId(hostWindow, "DynamicNameTarget").Current.Name != authoredName,
                     "Dynamic target name did not change after authored selection.");
                 Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
                 WaitUntil(() => TryFindRuntimeWindow(runtime.Id, "GWTP Guidance") is null,
@@ -239,7 +240,12 @@ internal static class Program
                     "Second-window duplicate is not in the same process.");
 
                 var authored = FindAllByAutomationId(hostWindow, "SharedContinue")[0];
+                var secondHwnd = new IntPtr(second.Current.NativeWindowHandle);
+                ShowWindow(secondHwnd, SwMinimize);
+                WaitUntil(() => second.Current.WindowVisualState == WindowVisualState.Minimized,
+                    "Second test window did not minimize before authored target selection.");
                 SelectThroughRealPicker(runtimeWindow, authored);
+                ShowWindow(secondHwnd, SwRestore);
                 Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
                 WaitUntil(() => IsOverlayAttached(runtime.Id, authored),
                     "Same-process second-window duplicate stole the authored target.");
