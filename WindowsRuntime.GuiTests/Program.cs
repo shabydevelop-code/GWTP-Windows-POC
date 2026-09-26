@@ -31,7 +31,8 @@ internal static class Program
         if (runtime is null) return 2;
 
         try
-              if (selectedTests is not null && selectedTests.SetEquals(new[] { 20 }))
+        {
+            if (selectedTests is not null && selectedTests.SetEquals(new[] { 20 }))
             {
                 var runtimeWindow = WaitForWindow(runtime.Id, "GWTP Windows POC");
                 Invoke(FindByName(runtimeWindow, "Open Ambiguity Test"));
@@ -78,7 +79,6 @@ internal static class Program
                 return _failed == 0 ? 0 : 1;
             }
 
-      {
             var runtimeWindow = WaitForWindow(runtime.Id, "GWTP Windows POC");
             Run("01. Open UIA Test Host through GUI", () =>
             {
