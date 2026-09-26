@@ -17,6 +17,8 @@
     <Page Remove="AmbiguityTestHost\**\*.xaml" />
     <ApplicationDefinition Remove="AmbiguityTestHost\**\App.xaml" />
     <None Remove="AmbiguityTestHost\**\*" />
+    <Compile Remove="WindowsRuntime.GuiTests\**\*.cs" />
+    <None Remove="WindowsRuntime.GuiTests\**\*" />
   </ItemGroup>
 
 </Project>
