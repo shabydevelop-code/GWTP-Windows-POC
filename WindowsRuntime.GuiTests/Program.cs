@@ -240,15 +240,18 @@ internal static class Program
             return false;
         }, "Intended picker target is obscured at click point.");
         mouse_event(MouseeventfLeftdown, 0, 0, 0, UIntPtr.Zero);
-        WaitUntil(() => (GetAsyncKeyState(VkLbutton) & 0x8000) != 0,
-            "Synthetic mouse-down was not observable.");
-        mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
-        ShowWindow(runtimeHwnd, SwShowNoActivate);
+
+        // The production picker samples the global mouse state every 40 ms.
+        // Keep the button down only until the picker itself reports completion;
+        // do not use a fixed transition delay.
         WaitUntil(() =>
         {
             var button = FindByAutomationId(runtimeWindow, "SelectElementButton");
             return button.Current.Name == "Select Element" && button.Current.IsEnabled;
         }, "Picker did not complete selection.");
+
+        mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
+        ShowWindow(runtimeHwnd, SwShowNoActivate);
 
         // Do not let a failed/late synthetic click leak selection mode into the next test.
         mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
