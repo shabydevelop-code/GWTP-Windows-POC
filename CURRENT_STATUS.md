@@ -263,3 +263,10 @@ Manual verification of Restore behavior is still required after pulling this cha
 - The earlier apparent several-second host-close lifecycle limitation was therefore caused, in the reproduced case, by synchronous `Automation.RemoveAutomationPropertyChangedEventHandler` blocking the WPF Dispatcher during tracker disposal rather than by a late definitive close signal.
 - The previous host-close delay should no longer be treated as an active known limitation for the verified scenario. Persistent diagnostics remain available for future provider-specific stalls.
 - The POC selection flow intentionally shows guidance immediately after selecting a UIA element because selection also creates/activates an in-memory test step. This is a test-harness behavior only. In production, Editor target selection will capture/store the Windows target descriptor; guidance is rendered only by Preview or Learner execution.
+
+## Repeatable Windows target ambiguity harness — 2026-09-26
+- Added an explicit POC-only Ambiguity Test window reachable from the main runtime window.
+- The harness contains two visible `Continue` buttons with the same leaf Name, AutomationId (`SharedContinue`) and ControlType, under distinct parent groups (`GroupA` and `GroupB`).
+- This creates a deterministic ambiguity case for validating ancestor-based target rediscovery without depending on the UIA structure of an external application.
+- Test procedure: open Ambiguity Test, select Group A Continue, verify rediscovery/highlight remains on Group A; repeat for Group B. Diagnostics should record `FindElement.Ambiguous count=2` followed by `FindElement.ResolvedByAncestor`.
+- The harness is test-only and is not part of the future Editor/Learner production flow.
