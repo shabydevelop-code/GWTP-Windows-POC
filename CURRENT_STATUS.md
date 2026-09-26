@@ -401,3 +401,12 @@ Conclusion for the current milestone: target selection, tracking, rediscovery, l
 - The production descriptor uses ProcessName + Window descriptor + Element descriptor + ordered ancestor path. AutomationId is preferred over Name; Name becomes strict only when AutomationId is absent. This intentionally fixes the dynamic-Name limitation demonstrated by T05 rather than persisting the POC matching behavior unchanged.
 - Transient PID/HWND/SessionId/bounds/RuntimeId are excluded from persistence; ambiguity continues to fail safe/pending.
 - The existing Windows GUI baseline remains **21/21 green**. Next work moves to the main GWTP integration slice (DB/API/Editor/runtime). Additional POC changes are only required if integration exposes a concrete missing runtime capability.
+
+
+## Native Messaging authoring bridge — 2026-09-26 (pending local verification)
+- Added production-oriented Chrome/Edge Native Messaging host mode `com.gwtp.windows` to connect the main GWTP Editor to the interactive Windows UIA runtime without routing UIA through the API Windows Service.
+- Native host mode is selected when the runtime is launched by a browser extension origin. The normal standalone WPF test/runtime window remains available when launched directly.
+- Added descriptor-only authoring picker events. A Native Messaging `pickTarget` request starts the existing physical UIA picker and returns the frozen production WindowsTargetDescriptor; it does not append a POC test step and does not show learner guidance.
+- Added `WindowsTargetDescriptorFactory` that emits ProcessName, top-level Window descriptor, Element descriptor, and ordered nearest-to-farthest meaningful ancestors. Transient PID/HWND/SessionId/bounds/RuntimeId are not serialized.
+- Added per-user Chrome/Edge host registration scripts (`install-native-host.ps1` and `install-native-host.bat`) requiring the explicit extension ID.
+- Existing 21/21 Windows GUI baseline predates these changes. Build, native-host registration, real Editor-to-picker round trip, and the full Windows GUI regression must be run before this bridge is marked verified.
