@@ -277,3 +277,10 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Removed the in-process AmbiguityTestWindow and added a separate WPF AmbiguityTestHost executable/project containing the same two duplicate Continue controls under GroupA/GroupB.
 - The POC's Open Ambiguity Test action now launches that host as a separate process. Runtime targeting/tracking logic was not changed to accommodate the test.
 - Manual verification required: select each Continue control independently, verify ancestor-based rediscovery returns the selected group, then move/minimize/restore/close the external test host and verify guidance/highlight tracking behaves like an ordinary external Windows application.
+
+## Ambiguity runtime follow-up — 2026-09-26 (pending manual verification)
+- External ambiguity harness successfully rediscovered the selected duplicate target, confirming the ancestor discriminator works in the exercised case.
+- Manual test exposed two runtime issues: Prev/Next between already-present targets takes roughly half a second, and minimizing the target host can briefly move guidance to the upper-left corner.
+- Minimize race hardened: the background bounds read now checks the host HWND visibility/minimized state before publishing UIA bounds and re-checks minimized state after the UIA read. Minimized/hidden hosts produce the temporary-hidden path instead of a BoundsChanged event.
+- Step-transition diagnostics now measure total FindElement/root FindAll/ancestor-resolution timing and log StepTransition Begin/End. No artificial delay or polling was added.
+- Manual verification required: confirm minimize no longer flashes guidance at the upper-left corner; exercise repeated Prev/Next and inspect windows-runtime.log elapsedMs values before optimizing lookup.
