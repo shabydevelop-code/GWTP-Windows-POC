@@ -364,8 +364,8 @@ public partial class MainWindow : Window
     {
         try
         {
-            var element = AutomationElement.FromPoint(
-                new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
+            var element = ResolveSelectableElement(AutomationElement.FromPoint(
+                new System.Windows.Point(cursorPosition.X, cursorPosition.Y)));
 
             if (element is null)
             {
@@ -410,6 +410,34 @@ public partial class MainWindow : Window
         }
     }
 
+    private static AutomationElement? ResolveSelectableElement(AutomationElement? element)
+    {
+        if (element is null) return null;
+
+        // WPF buttons commonly expose their rendered caption as a child Text
+        // element. For authoring, clicking that caption means selecting the
+        // owning interactive control, not the presentation-only text node.
+        var current = element;
+        for (var depth = 0; depth < 8 && current is not null; depth++)
+        {
+            try
+            {
+                if (current.Current.ControlType != ControlType.Text)
+                {
+                    return current;
+                }
+
+                current = TreeWalker.ControlViewWalker.GetParent(current);
+            }
+            catch (ElementNotAvailableException)
+            {
+                return null;
+            }
+        }
+
+        return element;
+    }
+
     private static bool AreSameElement(AutomationElement first, AutomationElement second)
     {
         try
@@ -426,8 +454,11 @@ public partial class MainWindow : Window
     {
         try
         {
-            var element = AutomationElement.FromPoint(
-                new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
+            // The hover overlay must never participate in the final UIA hit-test.
+            ClearHoverHighlight();
+
+            var element = ResolveSelectableElement(AutomationElement.FromPoint(
+                new System.Windows.Point(cursorPosition.X, cursorPosition.Y)));
 
             if (element is null)
             {
