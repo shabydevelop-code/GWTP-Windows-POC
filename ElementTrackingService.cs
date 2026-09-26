@@ -270,9 +270,23 @@ internal sealed class ElementTrackingService : IDisposable
 
         try
         {
-            bounds = _element.Current.BoundingRectangle;
-            var isOffscreen = _element.Current.IsOffscreen;
-            temporarilyHidden = isOffscreen || bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0;
+            // Minimize can race ahead of the WinEvent callback and UIA may briefly
+            // report a synthetic rectangle near (0,0). Never publish those bounds.
+            if (_hostWindow != IntPtr.Zero &&
+                (!IsWindow(_hostWindow) || IsIconic(_hostWindow) || !IsWindowVisible(_hostWindow)))
+            {
+                temporarilyHidden = true;
+            }
+            else
+            {
+                bounds = _element.Current.BoundingRectangle;
+                var isOffscreen = _element.Current.IsOffscreen;
+                temporarilyHidden = isOffscreen ||
+                                    bounds.IsEmpty ||
+                                    bounds.Width <= 0 ||
+                                    bounds.Height <= 0 ||
+                                    (_hostWindow != IntPtr.Zero && IsIconic(_hostWindow));
+            }
         }
         catch (ElementNotAvailableException)
         {
