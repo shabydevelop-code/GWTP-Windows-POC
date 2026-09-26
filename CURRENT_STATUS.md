@@ -227,3 +227,11 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Current Windows `ElementIdentity` provides ProcessName + AutomationId + Name + ControlType and rediscovery is already scoped to the runtime's current SessionId.
 - This identity is deliberately not being promoted to the persisted production DTO yet: hierarchy/fallback identity remains the next design/hardening task.
 - No temporary runtime-only DB field or CSS-selector reuse was introduced. After Windows target identity is hardened, main GWTP can add runtime + typed target persistence/API/Editor support as one coherent integration slice.
+
+## Windows target hierarchy hardening — 2026-09-26 (pending manual verification)
+- The local UIA target identity now captures one nearby meaningful ControlView ancestor in addition to ProcessName + AutomationId + Name + ControlType.
+- Ancestor capture walks at most eight ControlView parents and records the first parent that is a Window or exposes AutomationId/Name; this deliberately avoids persisting a brittle full UIA path.
+- Rediscovery now treats ambiguity safely: after current-session process filtering, a unique leaf match is accepted; multiple leaf matches are filtered by the captured ancestor; if the result is still ambiguous, no element is returned rather than attaching guidance to an arbitrary first candidate.
+- Diagnostic logging records ambiguous candidate counts and whether ancestor identity resolved the target.
+- This remains POC/runtime identity data only; nothing was copied into the main GWTP repository and no production DB/API schema was changed.
+- Manual verification required before promoting this shape to a persisted Windows target DTO: verify ordinary existing targets still rediscover, then verify two controls with the same leaf identity under different meaningful parents resolve to the originally selected control.
