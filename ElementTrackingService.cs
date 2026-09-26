@@ -170,7 +170,7 @@ internal sealed class ElementTrackingService : IDisposable
                     HostActivated?.Invoke();
                     RequestBoundsRefresh();
                 }
-                else
+                else if (!IsOwnedRuntimeOverlay(currentForeground))
                 {
                     ElementTemporarilyHidden?.Invoke();
                 }
@@ -227,6 +227,18 @@ internal sealed class ElementTrackingService : IDisposable
                hwnd == _rootWindow ||
                (_ownerWindow != IntPtr.Zero && hwnd == _ownerWindow) ||
                GetAncestor(hwnd, GaRoot) == _rootWindow;
+    }
+
+    private bool IsOwnedRuntimeOverlay(IntPtr hwnd)
+    {
+        // A no-activate topmost overlay can still be reported transiently while
+        // Windows is completing a foreground transition. Treat only windows owned
+        // by the tracked host as host context; all other processes are unrelated.
+        if (hwnd == IntPtr.Zero || _hostWindow == IntPtr.Zero) return false;
+
+        GetWindowThreadProcessId(hwnd, out var foregroundProcessId);
+        GetWindowThreadProcessId(_hostWindow, out var hostProcessId);
+        return foregroundProcessId != 0 && foregroundProcessId == hostProcessId;
     }
 
     private void EvaluateHostWindowVisibility()
