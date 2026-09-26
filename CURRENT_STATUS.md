@@ -284,3 +284,10 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Minimize race hardened: the background bounds read now checks the host HWND visibility/minimized state before publishing UIA bounds and re-checks minimized state after the UIA read. Minimized/hidden hosts produce the temporary-hidden path instead of a BoundsChanged event.
 - Step-transition diagnostics now measure total FindElement/root FindAll/ancestor-resolution timing and log StepTransition Begin/End. No artificial delay or polling was added.
 - Manual verification required: confirm minimize no longer flashes guidance at the upper-left corner; exercise repeated Prev/Next and inspect windows-runtime.log elapsedMs values before optimizing lookup.
+
+## Process-scoped Windows target lookup — 2026-09-26 (pending manual verification)
+- Measured Prev/Next latency was isolated to the desktop-wide UIA lookup: RootElement.FindAll(TreeScope.Descendants) consumed about 482-583 ms per transition in the ambiguity harness, while ancestor disambiguation and tracker disposal were only a few milliseconds.
+- Replaced the desktop-wide descendant scan with a two-stage lookup: enumerate only desktop top-level Window elements, keep windows whose ProcessId belongs to the authored ProcessName in the current Windows session, then search descendants only inside those process windows.
+- Existing leaf identity matching and ancestor ambiguity resolution remain unchanged semantically. No cache, polling, sleep, or fixed delay was introduced.
+- Added timing diagnostics for top-level process-window enumeration, per-window descendant lookup, unique resolution, and ancestor resolution.
+- Manual verification required: repeat Prev/Next in the external ambiguity host, confirm Group A/Group B still resolve correctly, and compare elapsedMs values with the previous ~0.5 s desktop-wide baseline.
