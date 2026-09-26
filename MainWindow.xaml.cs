@@ -332,6 +332,14 @@ public partial class MainWindow : Window
         var isMouseDown = IsLeftMouseButtonDown();
         var cursorPosition = Forms.Cursor.Position;
         var windowAtPoint = WindowFromPoint(cursorPosition);
+        if (isMouseDown != _mouseWasDown)
+        {
+            var foreground = GetForegroundWindow();
+            DiagnosticLog.Write(
+                $"Picker.MouseEdge down={isMouseDown} cursor={cursorPosition.X},{cursorPosition.Y} " +
+                $"window=0x{windowAtPoint.ToInt64():X} foreground=0x{foreground.ToInt64():X} " +
+                $"ourWindow={IsOurWindow(windowAtPoint)}");
+        }
 
         if (windowAtPoint != IntPtr.Zero && !IsOurWindow(windowAtPoint))
         {
@@ -779,6 +787,9 @@ public partial class MainWindow : Window
 
     [DllImport("user32.dll")]
     private static extern IntPtr WindowFromPoint(DrawingPoint point);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
