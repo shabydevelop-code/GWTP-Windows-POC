@@ -192,7 +192,7 @@ internal static class Program
 
     private static void SelectThroughRealPicker(AutomationElement runtimeWindow, AutomationElement target)
     {
-        Invoke(FindByName(runtimeWindow, "Select Element"));
+        Invoke(FindByAutomationId(runtimeWindow, "SelectElementButton"));
         Thread.Sleep(150);
         var rect = target.Current.BoundingRectangle;
         var x = (int)Math.Round(rect.Left + rect.Width / 2);
@@ -202,8 +202,11 @@ internal static class Program
         mouse_event(MouseeventfLeftdown, 0, 0, 0, UIntPtr.Zero);
         Thread.Sleep(80);
         mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
-        WaitUntil(() => FindByName(runtimeWindow, "Select Element").Current.Name == "Select Element",
-            "Picker did not complete selection.");
+        WaitUntil(() =>
+        {
+            var button = FindByAutomationId(runtimeWindow, "SelectElementButton");
+            return button.Current.Name == "Select Element" && button.Current.IsEnabled;
+        }, "Picker did not complete selection.");
     }
 
     private static AutomationElement WaitForRuntimeWindow(int processId, string name)
