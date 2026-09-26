@@ -37,6 +37,69 @@ internal static class Program
 
             var hostWindow = WaitForTopLevelWindow("GWTP Windows UIA Test Host");
 
+            Run("T01 picker selects duplicate target A and shows attached overlays", () =>
+            {
+                var targets = FindAllByAutomationId(hostWindow, "SharedContinue");
+                Require(targets.Count == 2, "Expected two duplicate Continue targets.");
+                SelectThroughRealPicker(runtimeWindow, targets[0]);
+                WaitForRuntimeWindow(runtime.Id, "GWTP Guidance");
+                WaitForRuntimeWindow(runtime.Id, "GWTP Highlight");
+                AssertOverlayAttached(runtime.Id, targets[0]);
+            });
+
+            Run("T01 picker selects duplicate target B and Previous/Next rediscover correct ancestors", () =>
+            {
+                var targets = FindAllByAutomationId(hostWindow, "SharedContinue");
+                SelectThroughRealPicker(runtimeWindow, targets[1]);
+                var guidance = WaitForRuntimeWindow(runtime.Id, "GWTP Guidance");
+                AssertOverlayAttached(runtime.Id, targets[1]);
+
+                Invoke(FindByName(guidance, "Previous"));
+                WaitUntil(() => IsOverlayAttached(runtime.Id, targets[0]), "Previous did not return to Group A target.");
+                guidance = WaitForRuntimeWindow(runtime.Id, "GWTP Guidance");
+                Invoke(FindByName(guidance, "Next"));
+                WaitUntil(() => IsOverlayAttached(runtime.Id, targets[1]), "Next did not return to Group B target.");
+            });
+
+            Run("Tracking follows target when host window moves", () =>
+            {
+                var target = FindAllByAutomationId(hostWindow, "SharedContinue")[1];
+                var before = WaitForRuntimeWindow(runtime.Id, "GWTP Guidance").Current.BoundingRectangle;
+                MoveWindow(hostWindow, 70, 45);
+                WaitUntil(() =>
+                {
+                    var after = TryFindRuntimeWindow(runtime.Id, "GWTP Guidance")?.Current.BoundingRectangle;
+                    return after is { } rect && Math.Abs(rect.Left - before.Left) > 20 && IsOverlayAttached(runtime.Id, target);
+                }, "Guidance did not follow the moved target.");
+            });
+
+            Run("Minimize hides overlays and Restore reattaches them", () =>
+            {
+                var target = FindAllByAutomationId(hostWindow, "SharedContinue")[1];
+                var hwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
+                ShowWindow(hwnd, SwMinimize);
+                WaitUntil(() => TryFindRuntimeWindow(runtime.Id, "GWTP Guidance") is null &&
+                                TryFindRuntimeWindow(runtime.Id, "GWTP Highlight") is null,
+                    "Overlays remained visible while host was minimized.");
+                ShowWindow(hwnd, SwRestore);
+                SetForegroundWindow(hwnd);
+                WaitUntil(() => IsOverlayAttached(runtime.Id, target),
+                    "Overlays did not reattach after Restore.");
+            });
+
+            Run("Foreground loss hides overlays and returning to host restores them", () =>
+            {
+                var target = FindAllByAutomationId(hostWindow, "SharedContinue")[1];
+                var runtimeHwnd = new IntPtr(runtimeWindow.Current.NativeWindowHandle);
+                SetForegroundWindow(runtimeHwnd);
+                WaitUntil(() => TryFindRuntimeWindow(runtime.Id, "GWTP Guidance") is null,
+                    "Guidance remained visible over unrelated foreground window.");
+                var hostHwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
+                SetForegroundWindow(hostHwnd);
+                WaitUntil(() => IsOverlayAttached(runtime.Id, target),
+                    "Guidance did not return when host regained foreground.");
+            });
+
             Run("T02 TextBox with AutomationId is exposed through UIA", () =>
             {
                 var target = FindByAutomationId(hostWindow, "StableTextBox");
@@ -96,6 +159,19 @@ internal static class Program
                 Require(FindByAutomationId(second, "SameProcessTarget").Current.ProcessId == hostWindow.Current.ProcessId,
                     "Second window is not owned by the same process.");
             });
+
+            Run("Closing tracked host removes overlays and runtime stays responsive", () =>
+            {
+                var hostHwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
+                SendMessage(hostHwnd, WmClose, IntPtr.Zero, IntPtr.Zero);
+                WaitUntil(() => TryFindTopLevelWindow("GWTP Windows UIA Test Host") is null,
+                    "Tracked host did not close.");
+                WaitUntil(() => TryFindRuntimeWindow(runtime.Id, "GWTP Guidance") is null &&
+                                TryFindRuntimeWindow(runtime.Id, "GWTP Highlight") is null,
+                    "Overlays remained after tracked host closed.");
+                Invoke(FindByName(runtimeWindow, "Open Ambiguity Test"));
+                WaitForTopLevelWindow("GWTP Windows UIA Test Host");
+            });
         }
         finally
         {
@@ -106,6 +182,81 @@ internal static class Program
         Console.WriteLine();
         Console.WriteLine($"Windows GUI sanity: {_passed} passed, {_failed} failed");
         return _failed == 0 ? 0 : 1;
+    }
+
+
+    private static List<AutomationElement> FindAllByAutomationId(AutomationElement root, string id)
+        => root.FindAll(TreeScope.Descendants,
+                new PropertyCondition(AutomationElement.AutomationIdProperty, id))
+            .Cast<AutomationElement>().ToList();
+
+    private static void SelectThroughRealPicker(AutomationElement runtimeWindow, AutomationElement target)
+    {
+        Invoke(FindByName(runtimeWindow, "Select Element"));
+        Thread.Sleep(150);
+        var rect = target.Current.BoundingRectangle;
+        var x = (int)Math.Round(rect.Left + rect.Width / 2);
+        var y = (int)Math.Round(rect.Top + rect.Height / 2);
+        SetCursorPos(x, y);
+        Thread.Sleep(100);
+        mouse_event(MouseeventfLeftdown, 0, 0, 0, UIntPtr.Zero);
+        Thread.Sleep(80);
+        mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
+        WaitUntil(() => FindByName(runtimeWindow, "Select Element").Current.Name == "Select Element",
+            "Picker did not complete selection.");
+    }
+
+    private static AutomationElement WaitForRuntimeWindow(int processId, string name)
+    {
+        AutomationElement? found = null;
+        WaitUntil(() => (found = TryFindRuntimeWindow(processId, name)) is not null,
+            $"Runtime window '{name}' did not appear.");
+        return found!;
+    }
+
+    private static AutomationElement? TryFindRuntimeWindow(int processId, string name)
+        => AutomationElement.RootElement.FindFirst(TreeScope.Children,
+            new AndCondition(
+                new PropertyCondition(AutomationElement.ProcessIdProperty, processId),
+                new PropertyCondition(AutomationElement.NameProperty, name)));
+
+    private static AutomationElement? TryFindTopLevelWindow(string name)
+        => AutomationElement.RootElement.FindFirst(TreeScope.Children,
+            new PropertyCondition(AutomationElement.NameProperty, name));
+
+    private static bool IsOverlayAttached(int runtimeProcessId, AutomationElement target)
+    {
+        try
+        {
+            var highlight = TryFindRuntimeWindow(runtimeProcessId, "GWTP Highlight");
+            var guidance = TryFindRuntimeWindow(runtimeProcessId, "GWTP Guidance");
+            if (highlight is null || guidance is null) return false;
+
+            var targetRect = target.Current.BoundingRectangle;
+            var highlightRect = highlight.Current.BoundingRectangle;
+            var guidanceRect = guidance.Current.BoundingRectangle;
+
+            var highlightMatches = Math.Abs(highlightRect.Left - targetRect.Left) <= 8 &&
+                                   Math.Abs(highlightRect.Top - targetRect.Top) <= 8 &&
+                                   Math.Abs(highlightRect.Width - targetRect.Width) <= 12 &&
+                                   Math.Abs(highlightRect.Height - targetRect.Height) <= 12;
+
+            var horizontalGap = Math.Max(0, Math.Max(targetRect.Left - guidanceRect.Right, guidanceRect.Left - targetRect.Right));
+            var verticalGap = Math.Max(0, Math.Max(targetRect.Top - guidanceRect.Bottom, guidanceRect.Top - targetRect.Bottom));
+            return highlightMatches && horizontalGap <= 40 && verticalGap <= 40;
+        }
+        catch (ElementNotAvailableException) { return false; }
+    }
+
+    private static void AssertOverlayAttached(int runtimeProcessId, AutomationElement target)
+        => Require(IsOverlayAttached(runtimeProcessId, target), "Highlight/guidance are not attached to the selected target.");
+
+    private static void MoveWindow(AutomationElement window, int dx, int dy)
+    {
+        var hwnd = new IntPtr(window.Current.NativeWindowHandle);
+        var rect = window.Current.BoundingRectangle;
+        Require(SetWindowPos(hwnd, IntPtr.Zero, (int)rect.Left + dx, (int)rect.Top + dy,
+            (int)rect.Width, (int)rect.Height, SwpNozorder | SwpNoactivate), "Could not move host window.");
     }
 
     private static void Run(string name, Action test)
@@ -205,6 +356,33 @@ internal static class Program
         }
         throw new DirectoryNotFoundException("Repository root not found.");
     }
+
+
+    private const uint MouseeventfLeftdown = 0x0002;
+    private const uint MouseeventfLeftup = 0x0004;
+    private const int SwMinimize = 6;
+    private const int SwRestore = 9;
+    private const uint SwpNozorder = 0x0004;
+    private const uint SwpNoactivate = 0x0010;
+    private const uint WmClose = 0x0010;
+
+    [DllImport("user32.dll")]
+    private static extern bool SetCursorPos(int x, int y);
+
+    [DllImport("user32.dll")]
+    private static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extraInfo);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hwnd, int command);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
 
     private static void TryCloseProcessByName(string name)
     {
