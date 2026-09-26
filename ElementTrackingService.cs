@@ -132,6 +132,7 @@ internal sealed class ElementTrackingService : IDisposable
 
     private void OnAutomationPropertyChanged(object sender, AutomationPropertyChangedEventArgs e)
     {
+        DiagnosticLog.Write("Tracker.AutomationPropertyChanged");
         RequestBoundsRefresh();
     }
 
@@ -151,8 +152,10 @@ internal sealed class ElementTrackingService : IDisposable
 
         if (eventType == EventSystemForeground)
         {
+            DiagnosticLog.Write("Tracker.ForegroundEvent.Begin");
             _dispatcher.BeginInvoke(() =>
             {
+                DiagnosticLog.Write("Tracker.ForegroundDispatcher.Begin");
                 if (IsHostWindowEvent(hwnd))
                 {
                     HostActivated?.Invoke();
@@ -162,7 +165,9 @@ internal sealed class ElementTrackingService : IDisposable
                 {
                     ElementTemporarilyHidden?.Invoke();
                 }
+                DiagnosticLog.Write("Tracker.ForegroundDispatcher.End");
             });
+            DiagnosticLog.Write("Tracker.ForegroundEvent.End");
             return;
         }
 
@@ -309,10 +314,12 @@ internal sealed class ElementTrackingService : IDisposable
 
     private void NotifyUnavailable()
     {
+        DiagnosticLog.Write("Tracker.NotifyUnavailable.Begin");
         if (!_disposed)
         {
             ElementUnavailable?.Invoke();
         }
+        DiagnosticLog.Write("Tracker.NotifyUnavailable.End");
     }
 
     private void CaptureWindowChain(AutomationElement element)
@@ -373,6 +380,7 @@ internal sealed class ElementTrackingService : IDisposable
 
     public void Dispose()
     {
+        DiagnosticLog.Write("Tracker.Dispose.Begin");
         if (_disposed)
         {
             return;
@@ -381,7 +389,9 @@ internal sealed class ElementTrackingService : IDisposable
         _disposed = true;
         try
         {
+            DiagnosticLog.Write("Tracker.Dispose.RemoveUIAHandler.Begin");
             Automation.RemoveAutomationPropertyChangedEventHandler(_element, OnAutomationPropertyChanged);
+            DiagnosticLog.Write("Tracker.Dispose.RemoveUIAHandler.End");
         }
         catch
         {
@@ -425,6 +435,7 @@ internal sealed class ElementTrackingService : IDisposable
         }
 
         _winEventDelegate = null;
+        DiagnosticLog.Write("Tracker.Dispose.End");
     }
 
     private const uint EventSystemForeground = 0x0003;
