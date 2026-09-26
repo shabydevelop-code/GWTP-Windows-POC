@@ -308,6 +308,20 @@ public partial class MainWindow : Window
 
     private void OnTrackedElementUnavailable()
     {
+        DiagnosticLog.Write("Tracker.Unavailable");
+
+        // Losing the process/window must not end an authored step. Keep the
+        // descriptor and transition the active test step to the same event-driven
+        // pending state used when navigation reaches a target that is not open yet.
+        // This allows a later process instance to satisfy the persisted identity.
+        if (_selectedIdentity is not null &&
+            _currentTestStepIndex >= 0 &&
+            _currentTestStepIndex < _testSteps.Count)
+        {
+            WaitForCurrentTestStepTarget();
+            return;
+        }
+
         CloseTrainingOverlay();
         StatusText.Text = "Element is no longer available.";
     }
