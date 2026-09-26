@@ -32,6 +32,68 @@ internal static class Program
 
         try
         {
+            if (selectedTests is not null && selectedTests.SetEquals(new[] { 17, 18 }))
+            {
+                var focusedRuntimeWindow = WaitForWindow(runtime.Id, "GWTP Windows POC");
+                Invoke(FindByName(focusedRuntimeWindow, "Open Ambiguity Test"));
+                var focusedHostWindow = WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
+
+                // Reproduce the exact lifecycle boundary suspected of leaking state:
+                // an active target disappears and returns, then T08 authors a duplicate
+                // leaf while a second same-process window exists.
+                Run("17. T07 active dynamic target hides when removed and returns event-driven", () =>
+                {
+                    PrepareHostTargetForPicker(focusedRuntimeWindow, focusedHostWindow, automationId: "AppearingTarget");
+                    var target = FindByAutomationId(focusedHostWindow, "AppearingTarget");
+                    SelectThroughRealPicker(focusedRuntimeWindow, target);
+                    Invoke(FindByName(focusedHostWindow, "Toggle dynamic target"));
+                    WaitUntil(() => TryFindRuntimeWindow(runtime.Id, "GWTP Guidance") is null &&
+                                    TryFindRuntimeWindow(runtime.Id, "GWTP Highlight") is null,
+                        "Active dynamic target overlays remained after target disappeared.");
+                    Invoke(FindByName(focusedHostWindow, "Toggle dynamic target"));
+                    WaitUntil(() => TryFindByAutomationId(focusedHostWindow, "AppearingTarget") is not null,
+                        "Dynamic target did not return to the host.");
+                });
+
+                Run("18. T08 duplicate leaf in second same-process window does not steal authored target", () =>
+                {
+                    Invoke(FindByName(focusedHostWindow, "Open second test window"));
+                    var second = WaitForTopLevelWindow("GWTP UIA Test Host — Second Window", LaunchTimeoutMs);
+                    var secondDuplicate = FindByAutomationId(second, "SharedContinue");
+                    Require(secondDuplicate.Current.ProcessId == focusedHostWindow.Current.ProcessId,
+                        "Second-window duplicate is not in the same process.");
+
+                    var secondHwnd = new IntPtr(second.Current.NativeWindowHandle);
+                    ShowWindow(secondHwnd, SwMinimize);
+                    WaitUntil(() =>
+                    {
+                        var pattern = (WindowPattern)second.GetCurrentPattern(WindowPattern.Pattern);
+                        return pattern.Current.WindowVisualState == WindowVisualState.Minimized;
+                    }, "Second test window did not minimize before authored target selection.");
+
+                    PrepareHostTargetForPicker(focusedRuntimeWindow, focusedHostWindow, automationId: "GroupA");
+                    var authored = FindTargetWithinGroup(focusedHostWindow, "GroupA", "SharedContinue");
+                    SelectThroughRealPicker(focusedRuntimeWindow, authored);
+                    WaitUntil(() => IsOverlayAttached(runtime.Id, authored),
+                        "Could not author the main-window duplicate after T07.");
+
+                    var hostHwnd = new IntPtr(focusedHostWindow.Current.NativeWindowHandle);
+                    ShowWindow(secondHwnd, SwRestore);
+                    SetForegroundWindow(hostHwnd);
+                    WaitUntil(() => GetForegroundWindow() == hostHwnd,
+                        "Authored host did not regain foreground before T08 rediscovery.");
+
+                    Invoke(FindByAutomationId(focusedRuntimeWindow, "FindElementButton"));
+                    SetForegroundWindow(hostHwnd);
+                    WaitUntil(() => IsOverlayAttached(runtime.Id, authored),
+                        "Same-process second-window duplicate stole the authored target.");
+                });
+
+                Console.WriteLine();
+                Console.WriteLine($"Windows GUI sanity: {_passed} passed, {_failed} failed");
+                return _failed == 0 ? 0 : 1;
+            }
+
             if (selectedTests is not null && selectedTests.SetEquals(new[] { 18 }))
             {
                 var focusedRuntimeWindow = WaitForWindow(runtime.Id, "GWTP Windows POC");
