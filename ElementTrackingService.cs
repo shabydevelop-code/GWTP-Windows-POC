@@ -88,7 +88,7 @@ internal sealed class ElementTrackingService : IDisposable
                 _winEventDelegate,
                 processId,
                 0,
-                WineventOutofcontext | WineventSkipownprocess);
+                WineventOutofcontext);
 
             _destroyWinEventHook = SetWinEventHook(
                 EventObjectDestroy,
@@ -97,7 +97,7 @@ internal sealed class ElementTrackingService : IDisposable
                 _winEventDelegate,
                 processId,
                 0,
-                WineventOutofcontext | WineventSkipownprocess);
+                WineventOutofcontext);
 
             _hideWinEventHook = SetWinEventHook(
                 EventObjectHide,
@@ -106,7 +106,7 @@ internal sealed class ElementTrackingService : IDisposable
                 _winEventDelegate,
                 processId,
                 0,
-                WineventOutofcontext | WineventSkipownprocess);
+                WineventOutofcontext);
 
                 _windowEventHook = SetWinEventHook(
                 EventSystemMinimizeStart,
@@ -115,7 +115,7 @@ internal sealed class ElementTrackingService : IDisposable
                 _winEventDelegate,
                 processId,
                 0,
-                WineventOutofcontext | WineventSkipownprocess);
+                WineventOutofcontext);
 
             _foregroundWinEventHook = SetWinEventHook(
                 EventSystemForeground,
@@ -124,7 +124,7 @@ internal sealed class ElementTrackingService : IDisposable
                 _winEventDelegate,
                 0,
                 0,
-                WineventOutofcontext | WineventSkipownprocess);
+                WineventOutofcontext);
 
         }
 
