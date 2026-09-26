@@ -14,15 +14,6 @@ public partial class MainWindow : Window
         Closed += (_, _) => _secondWindow?.Close();
     }
 
-internal static class ObjectExtensions
-{
-    public static T Also<T>(this T value, Action<T> action)
-    {
-        action(value);
-        return value;
-    }
-}
-
     private void ChangeDynamicName_Click(object sender, RoutedEventArgs e)
     {
         _dynamicNameVersion++;
@@ -38,13 +29,17 @@ internal static class ObjectExtensions
     }
 
     private static System.Windows.Controls.Button CreateRecreatedTarget()
-        => new()
+    {
+        var button = new System.Windows.Controls.Button
         {
             Width = 180,
             Height = 40,
             HorizontalAlignment = HorizontalAlignment.Left,
             Content = "Recreated Target"
-        }.Also(button => System.Windows.Automation.AutomationProperties.SetAutomationId(button, "RecreatedTarget"));
+        };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(button, "RecreatedTarget");
+        return button;
+    }
 
     private void RecreateTarget_Click(object sender, RoutedEventArgs e)
     {
