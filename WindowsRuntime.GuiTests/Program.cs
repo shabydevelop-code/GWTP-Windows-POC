@@ -261,7 +261,8 @@ internal static class Program
                     // Query the main host by its distinguishing Group A ancestor.
                     // A process-wide AutomationId lookup is intentionally ambiguous now
                     // because T08 adds another SharedContinue in the second window.
-                    var groupA = FindByAutomationId(hostWindow, "GroupA");
+                    var groupA = TryFindByAutomationId(hostWindow, "GroupA");
+                    if (groupA is null) return false;
                     authored = FindAllByAutomationId(groupA, "SharedContinue").FirstOrDefault();
                     if (authored is null) return false;
                     var rect = authored.Current.BoundingRectangle;
@@ -468,6 +469,10 @@ internal static class Program
         var targetText = target is null
             ? "<not found>"
             : RectText(target.Current.BoundingRectangle);
+        var groupAText = TryFindByAutomationId(hostWindow, "GroupA") is { } groupA
+            ? RectText(groupA.Current.BoundingRectangle)
+            : "<not found>";
+        var sharedCount = FindAllByAutomationId(hostWindow, "SharedContinue").Count;
         var visualState = "<unavailable>";
         try
         {
@@ -484,7 +489,7 @@ internal static class Program
             : "<unavailable>";
 
         return $"Authored target did not reach a physically accessible picker position. " +
-               $"Host={RectText(hostRect)}; HostState={visualState}; Target={targetText}; " +
+               $"Host={RectText(hostRect)}; HostState={visualState}; GroupA={groupAText}; SharedContinueCount={sharedCount}; Target={targetText}; " +
                $"Cursor={cursor}; Screens={screens}";
     }
 
