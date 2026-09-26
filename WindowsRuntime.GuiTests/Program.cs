@@ -7,6 +7,7 @@ using Forms = System.Windows.Forms;
 internal static class Program
 {
     private const int TimeoutMs = 3000;
+    private const int LaunchTimeoutMs = 10000;
     private static int _passed;
     private static int _failed;
 
@@ -32,7 +33,7 @@ internal static class Program
             Run("Open UIA Test Host through GUI", () =>
             {
                 Invoke(FindByName(runtimeWindow, "Open Ambiguity Test"));
-                WaitForTopLevelWindow("GWTP Windows UIA Test Host");
+                WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
             });
 
             var hostWindow = WaitForTopLevelWindow("GWTP Windows UIA Test Host");
@@ -171,7 +172,7 @@ internal static class Program
                                 TryFindRuntimeWindow(runtime.Id, "GWTP Highlight") is null,
                     "Overlays remained after tracked host closed.");
                 Invoke(FindByName(runtimeWindow, "Open Ambiguity Test"));
-                WaitForTopLevelWindow("GWTP Windows UIA Test Host");
+                WaitForTopLevelWindow("GWTP Windows UIA Test Host", LaunchTimeoutMs);
             });
         }
         finally
@@ -204,6 +205,10 @@ internal static class Program
         // the intended authored element before clicking it.
         SetWindowPos(hostHwnd, HwndTop, 0, 0, 0, 0,
             SwpNomove | SwpNosize | SwpNoactivate);
+        // Hide the runtime authoring window during the physical pick. This mirrors
+        // the intended picker UX and prevents GWTP itself from obscuring the target.
+        var runtimeHwnd = new IntPtr(runtimeWindow.Current.NativeWindowHandle);
+        ShowWindow(runtimeHwnd, SwHide);
 
         var rect = target.Current.BoundingRectangle;
         var x = (int)Math.Round(rect.Left + rect.Width / 2);
@@ -221,6 +226,7 @@ internal static class Program
         WaitUntil(() => (GetAsyncKeyState(VkLbutton) & 0x8000) != 0,
             "Synthetic mouse-down was not observable.");
         mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
+        ShowWindow(runtimeHwnd, SwShowNoActivate);
         WaitUntil(() =>
         {
             var button = FindByAutomationId(runtimeWindow, "SelectElementButton");
@@ -381,7 +387,7 @@ internal static class Program
         return found!;
     }
 
-    private static AutomationElement WaitForTopLevelWindow(string name)
+    private static AutomationElement WaitForTopLevelWindow(string name, int timeoutMs = TimeoutMs)
     {
         AutomationElement? found = null;
         WaitUntil(() =>
@@ -389,7 +395,7 @@ internal static class Program
             found = AutomationElement.RootElement.FindFirst(TreeScope.Children,
                 new PropertyCondition(AutomationElement.NameProperty, name));
             return found is not null;
-        }, $"Window '{name}' did not appear.");
+        }, $"Window '{name}' did not appear.", timeoutMs);
         return found!;
     }
 
@@ -414,10 +420,10 @@ internal static class Program
         invoke.Invoke();
     }
 
-    private static void WaitUntil(Func<bool> condition, string error)
+    private static void WaitUntil(Func<bool> condition, string error, int timeoutMs = TimeoutMs)
     {
         var sw = Stopwatch.StartNew();
-        while (sw.ElapsedMilliseconds < TimeoutMs)
+        while (sw.ElapsedMilliseconds < timeoutMs)
         {
             try { if (condition()) return; } catch (ElementNotAvailableException) { }
             Thread.Sleep(10);
@@ -445,6 +451,8 @@ internal static class Program
     private const int VkLbutton = 0x01;
     private const uint MouseeventfLeftdown = 0x0002;
     private const uint MouseeventfLeftup = 0x0004;
+    private const int SwHide = 0;
+    private const int SwShowNoActivate = 4;
     private const int SwMinimize = 6;
     private const int SwRestore = 9;
     private static readonly IntPtr HwndTop = IntPtr.Zero;
