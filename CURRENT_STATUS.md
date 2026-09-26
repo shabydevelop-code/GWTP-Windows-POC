@@ -369,3 +369,28 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Full `./run-sanity.ps1` regression was manually verified after the pending-target lifecycle fixes: **21 passed, 0 failed**.
 - Verified together: physical UIA picker, duplicate/ancestor rediscovery, movement/minimize/foreground tracking, targets with and without AutomationId, dynamic Name limitation evidence, deep hierarchy, dynamic target lifecycle, same-process multi-window disambiguation, host close responsiveness, cross-launch rediscovery, and fail-safe ambiguity across two identical same-session app instances.
 - Current Windows POC baseline is therefore 21/21 green. The production persisted Windows target descriptor remains intentionally unfrozen; the next architecture step is to derive it from the accumulated T01-T10 and lifecycle evidence rather than copying the experimental POC identity verbatim.
+
+
+### Windows POC test-coverage assessment (2026-09-26)
+The current Windows POC is considered comprehensively covered for the capabilities implemented at this stage. The 21/21 green GUI regression covers both normal execution and important failure/ambiguity paths rather than only the happy path.
+
+Current coverage includes:
+- real GUI/UI Automation element selection through the physical picker;
+- targets with and without authored AutomationId;
+- duplicate leaf identities and ancestor-based disambiguation;
+- deep UIA hierarchy;
+- dynamic Name behavior and the currently documented descriptor limitation;
+- element movement, minimize/restore, foreground loss/return, and host close;
+- targets that disappear and later return;
+- event-driven pending/resume behavior without production polling;
+- multiple top-level windows in the same process;
+- process restart / cross-launch rediscovery;
+- multiple identical application instances in the same Windows Session;
+- fail-safe ambiguity handling: unresolved ambiguity remains pending/null and never selects an arbitrary target;
+- regression coverage for pending-target lifecycle isolation between consecutive steps/scenarios.
+
+The suite runs against real executables and exercises the public GUI/UIA surface rather than directly invoking runtime implementation methods.
+
+This coverage is intentionally scoped to the current POC/runtime capabilities. Additional end-to-end coverage belongs to the integration stage after the production Windows target descriptor and persistence model are finalized. That later layer should cover DB persistence, GWTP restart with persisted targets, Editor save/Preview/Learner execution, Web-only/Windows-only/Hybrid guides, Web-to-Windows handoff, and validation in representative production environments such as Citrix and actual target applications.
+
+Conclusion for the current milestone: target selection, tracking, rediscovery, lifecycle handling, and ambiguity safety have sufficient automated evidence to proceed from generic POC hardening to defining the production Windows Target Descriptor. The experimental POC identity must still not be copied verbatim into the production schema without that design step.
