@@ -10,4 +10,13 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
+  <!-- AmbiguityTestHost is a separate executable project nested in this repository.
+       Exclude its sources/resources from the main POC project's default globbing. -->
+  <ItemGroup>
+    <Compile Remove="AmbiguityTestHost\**\*.cs" />
+    <Page Remove="AmbiguityTestHost\**\*.xaml" />
+    <ApplicationDefinition Remove="AmbiguityTestHost\**\App.xaml" />
+    <None Remove="AmbiguityTestHost\**\*" />
+  </ItemGroup>
+
 </Project>
