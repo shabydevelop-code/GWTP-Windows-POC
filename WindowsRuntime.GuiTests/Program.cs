@@ -247,22 +247,27 @@ internal static class Program
                     return pattern.Current.WindowVisualState == WindowVisualState.Minimized;
                 }, "Second test window did not minimize before authored target selection.");
 
-                // Reuse the screen-aware picker arrangement used by the rest of
-                // the GUI suite. Fixed coordinates are invalid on scaled/multi-monitor
-                // desktops because UIA bounds and physical cursor coordinates can differ.
+                // Earlier lifecycle tests may leave the host minimized/restored or
+                // moved. Normalize both windows before arranging them for a real pick.
+                var hostHwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
+                var runtimeHwnd = new IntPtr(runtimeWindow.Current.NativeWindowHandle);
+                ShowWindow(hostHwnd, SwRestore);
+                ShowWindow(runtimeHwnd, SwRestore);
                 ArrangeWindowsForPicker(runtimeWindow, hostWindow);
 
-                var authored = FindAllByAutomationId(hostWindow, "SharedContinue")[0];
+                AutomationElement? authored = null;
                 WaitUntil(() =>
                 {
+                    authored = FindAllByAutomationId(hostWindow, "SharedContinue").FirstOrDefault();
+                    if (authored is null) return false;
                     var rect = authored.Current.BoundingRectangle;
                     if (rect.IsEmpty || rect.Width <= 0 || rect.Height <= 0) return false;
                     var center = new System.Drawing.Point(
                         (int)Math.Round(rect.Left + rect.Width / 2),
                         (int)Math.Round(rect.Top + rect.Height / 2));
-                    return Forms.Screen.AllScreens.Any(screen => screen.WorkingArea.Contains(center));
+                    return Forms.Screen.AllScreens.Any(screen => screen.Bounds.Contains(center));
                 }, "Authored target did not reach a physically accessible picker position.");
-                SelectThroughRealPicker(runtimeWindow, authored);
+                SelectThroughRealPicker(runtimeWindow, authored!);
                 ShowWindow(secondHwnd, SwRestore);
                 Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
                 WaitUntil(() => IsOverlayAttached(runtime.Id, authored),
