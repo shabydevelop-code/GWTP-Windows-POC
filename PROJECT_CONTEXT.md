@@ -64,3 +64,10 @@ GitHub main is the source of truth. Inspect current code and these context/statu
 - The current POC `ElementIdentity` proves useful initial identity fields: ProcessName, AutomationId, Name and ControlType, with rediscovery already restricted to the current Windows SessionId. It is not yet the final persisted DTO because hierarchy/fallback identity remains a known ambiguity.
 - The production persisted Windows target descriptor must be finalized only after target hardening; the main DB/API migration should then introduce runtime plus typed target persistence coherently rather than adding a temporary platform-only schema.
 - `TargetType=none` carries no UIA target, but a Windows instruction-only step is still owned/rendered by the Windows runtime in a mixed guide.
+
+## Production descriptor handoff completed (2026-09-26)
+
+- The POC hardening milestone has produced the first frozen production Windows target contract in the main GWTP repository: `WINDOWS_TARGET_DESCRIPTOR.md`.
+- The production contract deliberately does not copy experimental `ElementIdentity` verbatim. It promotes the single POC ancestor to an ordered meaningful ancestor path and changes matching precedence so a stable AutomationId is not invalidated by a changing Name.
+- PID, HWND, SessionId, bounds and RuntimeId remain runtime/transient data and are not persisted. SessionId continues to scope discovery at runtime.
+- The POC's 21/21 GUI baseline remains the evidence baseline for selection/tracking/rediscovery/lifecycle/ambiguity. Further POC changes should now be driven by concrete integration gaps found while implementing the production contract, not by speculative identity expansion.
