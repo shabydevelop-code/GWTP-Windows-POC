@@ -69,6 +69,12 @@ public partial class MainWindow : Window
         UpdateTrackedHighlight(showFoundStatus: true);
     }
 
+    private void OpenAmbiguityTestButton_Click(object sender, RoutedEventArgs e)
+    {
+        var testWindow = new AmbiguityTestWindow();
+        testWindow.Show();
+    }
+
     private void UpdateTrackedHighlight(bool showFoundStatus)
     {
         if (_selectedIdentity is null)
