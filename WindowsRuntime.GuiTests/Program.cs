@@ -242,8 +242,11 @@ internal static class Program
                 var authored = FindAllByAutomationId(hostWindow, "SharedContinue")[0];
                 var secondHwnd = new IntPtr(second.Current.NativeWindowHandle);
                 ShowWindow(secondHwnd, SwMinimize);
-                WaitUntil(() => second.Current.WindowVisualState == WindowVisualState.Minimized,
-                    "Second test window did not minimize before authored target selection.");
+                WaitUntil(() =>
+                {
+                    var pattern = (WindowPattern)second.GetCurrentPattern(WindowPattern.Pattern);
+                    return pattern.Current.WindowVisualState == WindowVisualState.Minimized;
+                }, "Second test window did not minimize before authored target selection.");
                 SelectThroughRealPicker(runtimeWindow, authored);
                 ShowWindow(secondHwnd, SwRestore);
                 Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
