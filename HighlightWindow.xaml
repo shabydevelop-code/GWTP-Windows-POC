@@ -1,6 +1,7 @@
 <Window x:Class="GWTP_Windows_POC.HighlightWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GWTP Highlight"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
