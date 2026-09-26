@@ -291,3 +291,10 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Existing leaf identity matching and ancestor ambiguity resolution remain unchanged semantically. No cache, polling, sleep, or fixed delay was introduced.
 - Added timing diagnostics for top-level process-window enumeration, per-window descendant lookup, unique resolution, and ancestor resolution.
 - Manual verification required: repeat Prev/Next in the external ambiguity host, confirm Group A/Group B still resolve correctly, and compare elapsedMs values with the previous ~0.5 s desktop-wide baseline.
+
+## Process-scoped lookup manually verified — 2026-09-26
+- Manual verification passed after replacing the desktop-wide UIA descendant scan with process-window-scoped lookup.
+- Prev/Next transitions in the external ambiguity harness are now responsive.
+- Group A/Group B duplicate targets continue to resolve correctly through ancestor disambiguation.
+- The minimize/restore overlay behavior is also verified as correct in the same test cycle.
+- This closes the measured ~0.5 s transition-latency issue and the minimize upper-left overlay flash observed during ambiguity testing.
