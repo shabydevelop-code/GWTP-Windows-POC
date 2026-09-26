@@ -247,17 +247,17 @@ internal static class Program
                     return pattern.Current.WindowVisualState == WindowVisualState.Minimized;
                 }, "Second test window did not minimize before authored target selection.");
 
-                // Put the authored host at a deterministic visible position before
-                // taking fresh target bounds. Earlier lifecycle tests intentionally
-                // move this window, so stale/off-screen geometry must not leak here.
-                var hostHwnd = new IntPtr(hostWindow.Current.NativeWindowHandle);
-                var hostRect = hostWindow.Current.BoundingRectangle;
-                Require(SetWindowPos(hostHwnd, HwndTop, 120, 120,
-                    (int)hostRect.Width, (int)hostRect.Height, SwpNoactivate),
-                    "Could not arrange authored host for same-process picker test.");
-                WaitUntil(() => hostWindow.Current.BoundingRectangle.Left >= 100 &&
-                                hostWindow.Current.BoundingRectangle.Top >= 100,
-                    "Authored host did not reach deterministic picker position.");
+                // Reuse the screen-aware picker arrangement used by the rest of
+                // the GUI suite. Fixed coordinates are invalid on scaled/multi-monitor
+                // desktops because UIA bounds and physical cursor coordinates can differ.
+                ArrangeWindowsForPicker(runtimeWindow, hostWindow);
+                WaitUntil(() =>
+                {
+                    var rect = hostWindow.Current.BoundingRectangle;
+                    var work = Forms.Screen.PrimaryScreen.WorkingArea;
+                    return rect.Left >= work.Left && rect.Top >= work.Top &&
+                           rect.Right <= work.Right && rect.Bottom <= work.Bottom;
+                }, "Authored host did not reach a visible picker position.");
 
                 var authored = FindAllByAutomationId(hostWindow, "SharedContinue")[0];
                 SelectThroughRealPicker(runtimeWindow, authored);
