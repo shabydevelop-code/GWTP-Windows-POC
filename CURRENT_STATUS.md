@@ -316,3 +316,12 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Initial automated coverage opens the external Test Host by invoking the real runtime GUI button and exercises T02-T08 through UI Automation: controls with/without authored AutomationId, dynamic Name mutation, deep hierarchy, dynamic visibility, and a second top-level window in the same process.
 - T01 end-to-end picker/ancestor rediscovery and overlay lifecycle tests remain to be automated through the GUI; no test-only runtime API was added to bypass the picker.
 - The test runner uses bounded waits only as test safety synchronization around observable GUI state; production runtime remains event-driven with no polling.
+
+## Windows GUI overlay/lifecycle regression — 2026-09-26 (pending first run)
+- Extended WindowsRuntime.GuiTests beyond UIA exposure checks into real runtime GUI behavior.
+- T01 now drives the real Select Element button, moves the physical cursor to each duplicate target, performs a real left-click, and verifies the runtime-created highlight/guidance windows against the selected target geometry.
+- T01 then invokes Previous/Next through the visible GuidanceWindow controls and verifies rediscovery returns to the correct duplicate target under its authored ancestor rather than the other identical leaf.
+- Added GUI lifecycle checks for host-window movement (overlay follows target), Minimize (overlays disappear), Restore (overlays reattach), unrelated foreground activation (guidance hides), tracked-host foreground return (guidance returns), and tracked-host close (overlays disappear and the runtime remains responsive enough to reopen the Test Host).
+- GuidanceWindow and HighlightWindow now expose stable window Titles for accessibility/UI Automation discovery; this does not add a test-only runtime API or bypass runtime behavior.
+- The suite still treats observable GUI state as the assertion surface. Win32 is used only to reproduce real desktop actions such as physical mouse click, move, minimize/restore, foreground activation, and close.
+- First local execution of the expanded suite is required before this becomes the new green baseline.
