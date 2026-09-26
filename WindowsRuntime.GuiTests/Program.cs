@@ -6,7 +6,7 @@ using Forms = System.Windows.Forms;
 
 internal static class Program
 {
-    private const int TimeoutMs = 10000;
+    private const int TimeoutMs = 3000;
     private static int _passed;
     private static int _failed;
 
@@ -199,18 +199,24 @@ internal static class Program
 
         var hostHwnd = GetAncestorWindowFromElement(target);
         Require(hostHwnd != IntPtr.Zero, "Could not resolve target host window.");
-        // SetForegroundWindow is intentionally best-effort. Windows foreground-lock
-        // policy may reject programmatic activation from the console test process;
-        // that is not a runtime failure and should not make the GUI test fight focus.
-        SetForegroundWindow(hostHwnd);
+        // Do not fight Windows foreground-lock. Instead make the target host
+        // physically topmost for the click and prove that UIA FromPoint resolves
+        // the intended authored element before clicking it.
+        SetWindowPos(hostHwnd, HwndTop, 0, 0, 0, 0,
+            SwpNomove | SwpNosize | SwpNoactivate);
 
-        // Resolve live geometry after the activation attempt. The production picker
-        // itself does not require the target application to own foreground.
         var rect = target.Current.BoundingRectangle;
         var x = (int)Math.Round(rect.Left + rect.Width / 2);
         var y = (int)Math.Round(rect.Top + rect.Height / 2);
         Require(SetCursorPos(x, y), "Could not move cursor to target.");
         WaitUntil(() => IsCursorInside(rect), "Cursor did not reach target bounds.");
+        WaitUntil(() =>
+        {
+            var atPoint = AutomationElement.FromPoint(new System.Windows.Point(x, y));
+            return atPoint is not null &&
+                   atPoint.Current.AutomationId == target.Current.AutomationId &&
+                   atPoint.Current.ProcessId == target.Current.ProcessId;
+        }, "Intended picker target is obscured at click point.");
         mouse_event(MouseeventfLeftdown, 0, 0, 0, UIntPtr.Zero);
         WaitUntil(() => (GetAsyncKeyState(VkLbutton) & 0x8000) != 0,
             "Synthetic mouse-down was not observable.");
@@ -441,7 +447,10 @@ internal static class Program
     private const uint MouseeventfLeftup = 0x0004;
     private const int SwMinimize = 6;
     private const int SwRestore = 9;
+    private static readonly IntPtr HwndTop = IntPtr.Zero;
     private const uint SwpNozorder = 0x0004;
+    private const uint SwpNosize = 0x0001;
+    private const uint SwpNomove = 0x0002;
     private const uint SwpNoactivate = 0x0010;
     private const uint WmClose = 0x0010;
     private const uint GaRoot = 2;
