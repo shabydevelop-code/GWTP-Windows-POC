@@ -422,7 +422,48 @@ public partial class MainWindow : Window
             element.Current.Name ?? string.Empty,
             element.Current.AutomationId ?? string.Empty,
             element.Current.ControlType,
-            GetProcessName(processId));
+            GetProcessName(processId),
+            CreateAncestorIdentity(element));
+    }
+
+    private static AncestorIdentity? CreateAncestorIdentity(AutomationElement element)
+    {
+        var walker = TreeWalker.ControlViewWalker;
+        AutomationElement? current;
+
+        try
+        {
+            current = walker.GetParent(element);
+        }
+        catch (ElementNotAvailableException)
+        {
+            return null;
+        }
+
+        for (var depth = 0; current is not null && depth < 8; depth++)
+        {
+            try
+            {
+                var automationId = current.Current.AutomationId ?? string.Empty;
+                var name = current.Current.Name ?? string.Empty;
+                var controlType = current.Current.ControlType;
+
+                if (controlType == ControlType.Window ||
+                    !string.IsNullOrWhiteSpace(automationId) ||
+                    !string.IsNullOrWhiteSpace(name))
+                {
+                    return new AncestorIdentity(name, automationId, controlType);
+                }
+
+                current = walker.GetParent(current);
+            }
+            catch (ElementNotAvailableException)
+            {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     private static AutomationElement? FindElement(ElementIdentity identity)
@@ -475,18 +516,93 @@ public partial class MainWindow : Window
             new AndCondition(conditions.ToArray()));
         DiagnosticLog.Write("FindElement.RootFindAll.End");
 
+        var sessionCandidates = new List<AutomationElement>();
         foreach (AutomationElement candidate in candidates)
         {
             try
             {
-                if (processIds.Contains(candidate.Current.ProcessId)) return candidate;
+                if (processIds.Contains(candidate.Current.ProcessId))
+                {
+                    sessionCandidates.Add(candidate);
+                }
             }
             catch (ElementNotAvailableException)
             {
             }
         }
 
+        if (sessionCandidates.Count == 1) return sessionCandidates[0];
+        if (sessionCandidates.Count == 0) return null;
+
+        DiagnosticLog.Write($"FindElement.Ambiguous count={sessionCandidates.Count}");
+
+        if (identity.Ancestor is null)
+        {
+            DiagnosticLog.Write("FindElement.AmbiguousNoAncestor");
+            return null;
+        }
+
+        var ancestorMatches = sessionCandidates
+            .Where(candidate => HasMatchingAncestor(candidate, identity.Ancestor))
+            .ToList();
+
+        if (ancestorMatches.Count == 1)
+        {
+            DiagnosticLog.Write("FindElement.ResolvedByAncestor");
+            return ancestorMatches[0];
+        }
+
+        DiagnosticLog.Write($"FindElement.AmbiguousAfterAncestor count={ancestorMatches.Count}");
         return null;
+    }
+
+    private static bool HasMatchingAncestor(AutomationElement element, AncestorIdentity identity)
+    {
+        var walker = TreeWalker.ControlViewWalker;
+        AutomationElement? current;
+
+        try
+        {
+            current = walker.GetParent(element);
+        }
+        catch (ElementNotAvailableException)
+        {
+            return false;
+        }
+
+        for (var depth = 0; current is not null && depth < 8; depth++)
+        {
+            try
+            {
+                if (MatchesAncestor(current, identity)) return true;
+                current = walker.GetParent(current);
+            }
+            catch (ElementNotAvailableException)
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool MatchesAncestor(AutomationElement element, AncestorIdentity identity)
+    {
+        if (element.Current.ControlType != identity.ControlType) return false;
+
+        if (!string.IsNullOrWhiteSpace(identity.AutomationId) &&
+            !string.Equals(element.Current.AutomationId, identity.AutomationId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(identity.Name) &&
+            !string.Equals(element.Current.Name, identity.Name, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private void ShowElement(AutomationElement element)
@@ -581,5 +697,11 @@ public partial class MainWindow : Window
         string Name,
         string AutomationId,
         ControlType ControlType,
-        string ProcessName);
+        string ProcessName,
+        AncestorIdentity? Ancestor);
+
+    private sealed record AncestorIdentity(
+        string Name,
+        string AutomationId,
+        ControlType ControlType);
 }
