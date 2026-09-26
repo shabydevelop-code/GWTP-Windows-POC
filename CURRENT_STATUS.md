@@ -356,3 +356,10 @@ Manual verification of Restore behavior is still required after pulling this cha
 - Focused sequence `./run-sanity.ps1 -Test 17,18` reproduced the full-suite T08 regression while test 18 alone remained green, proving direct lifecycle state leakage from T07 rather than a WindowIdentity lookup defect.
 - Pending-target resume now revalidates that the identity associated with the active step is still current before a queued UIA window-open resolution may replace the tracker; stale resolutions are ignored and logged as `PendingTarget.StaleResolutionIgnored`.
 - Reverify focused `17,18`, then focused `20`, then the complete 21-test GUI regression.
+
+
+### Pending identity callback capture correction (2026-09-26)
+- Focused `17,18` passed after binding pending callbacks to the identity that entered pending state.
+- Focused test 20 then exposed a cleanup interaction: `StopPendingTargetWait()` clears the shared pending field before the queued callback consumes it.
+- The watcher callback now closes over an immutable local `pendingIdentity`; the field remains lifecycle bookkeeping only. This preserves both stale-callback isolation and cross-launch resume semantics.
+- Reverify focused 20, then focused 17,18, then full regression.
