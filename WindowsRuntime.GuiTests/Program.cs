@@ -261,6 +261,21 @@ internal static class Program
                     // Query the main host by its distinguishing Group A ancestor.
                     // A process-wide AutomationId lookup is intentionally ambiguous now
                     // because T08 adds another SharedContinue in the second window.
+                    var scenarioScroll = TryFindByAutomationId(hostWindow, "ScenarioScrollViewer");
+                    if (scenarioScroll is null ||
+                        !scenarioScroll.TryGetCurrentPattern(ScrollPattern.Pattern, out var scrollPatternObject) ||
+                        scrollPatternObject is not ScrollPattern scenarioScrollPattern)
+                    {
+                        return false;
+                    }
+
+                    if (scenarioScrollPattern.Current.VerticallyScrollable)
+                    {
+                        scenarioScrollPattern.SetScrollPercent(
+                            ScrollPattern.NoScroll,
+                            0);
+                    }
+
                     var groupA = TryFindByAutomationId(hostWindow, "GroupA");
                     if (groupA is null) return false;
 
