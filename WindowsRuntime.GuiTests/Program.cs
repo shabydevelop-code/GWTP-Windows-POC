@@ -212,7 +212,8 @@ internal static class Program
         Require(SetCursorPos(x, y), "Could not move cursor to target.");
         WaitUntil(() => IsCursorInside(rect), "Cursor did not reach target bounds.");
         mouse_event(MouseeventfLeftdown, 0, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(120);
+        WaitUntil(() => (GetAsyncKeyState(VkLbutton) & 0x8000) != 0,
+            "Synthetic mouse-down was not observable.");
         mouse_event(MouseeventfLeftup, 0, 0, 0, UIntPtr.Zero);
         WaitUntil(() =>
         {
@@ -413,7 +414,7 @@ internal static class Program
         while (sw.ElapsedMilliseconds < TimeoutMs)
         {
             try { if (condition()) return; } catch (ElementNotAvailableException) { }
-            Thread.Sleep(50);
+            Thread.Sleep(10);
         }
         throw new TimeoutException(error);
     }
@@ -435,6 +436,7 @@ internal static class Program
     }
 
 
+    private const int VkLbutton = 0x01;
     private const uint MouseeventfLeftdown = 0x0002;
     private const uint MouseeventfLeftup = 0x0004;
     private const int SwMinimize = 6;
@@ -446,6 +448,9 @@ internal static class Program
 
     [StructLayout(LayoutKind.Sequential)]
     private struct NativePoint { public int X; public int Y; }
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int virtualKey);
 
     [DllImport("user32.dll")]
     private static extern bool SetCursorPos(int x, int y);
