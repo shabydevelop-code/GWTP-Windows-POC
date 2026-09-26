@@ -738,6 +738,22 @@ public partial class MainWindow : Window
 
     private bool IsOurWindow(IntPtr windowHandle)
     {
+        if (windowHandle == IntPtr.Zero) return false;
+
+        // During element picking the hover highlight is a separate top-level,
+        // click-through GWTP window placed directly over the authored target.
+        // WindowFromPoint can therefore report the overlay itself. Treat only the
+        // interactive runtime windows as "ours"; the visual highlight must not
+        // block selection of the application underneath it.
+        if (_highlightWindow is not null)
+        {
+            var highlightHandle = new WindowInteropHelper(_highlightWindow).Handle;
+            if (highlightHandle != IntPtr.Zero && windowHandle == highlightHandle)
+            {
+                return false;
+            }
+        }
+
         if (_windowHandle == IntPtr.Zero) return false;
         return windowHandle == _windowHandle || IsChild(_windowHandle, windowHandle);
     }
