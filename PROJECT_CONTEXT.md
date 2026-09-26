@@ -55,3 +55,12 @@ Implement WEB -> WINDOWS -> WEB using one guide and one GWTP learner/progress st
 
 ## Repository workflow
 GitHub main is the source of truth. Inspect current code and these context/status files before substantial changes. Functional or architectural changes must update CURRENT_STATUS.md in the same change set.
+
+## Shared GuideStep target contract (2026-09-26)
+
+- The main GWTP GuideStep will own a runtime discriminator (`web` / `windows`) independently from `TargetType` (`element` / `none`).
+- Shared step semantics are runtime-neutral: order, instruction, screen name, target type and authored validation. Element target identity is runtime-specific.
+- A Windows element target must be represented as a Windows/UIA target descriptor; it must not be serialized into the Web CSS selector/frame fields.
+- The current POC `ElementIdentity` proves useful initial identity fields: ProcessName, AutomationId, Name and ControlType, with rediscovery already restricted to the current Windows SessionId. It is not yet the final persisted DTO because hierarchy/fallback identity remains a known ambiguity.
+- The production persisted Windows target descriptor must be finalized only after target hardening; the main DB/API migration should then introduce runtime plus typed target persistence coherently rather than adding a temporary platform-only schema.
+- `TargetType=none` carries no UIA target, but a Windows instruction-only step is still owned/rendered by the Windows runtime in a mixed guide.
