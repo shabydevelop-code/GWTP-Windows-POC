@@ -8,8 +8,8 @@ internal static class Program
 {
     private const int TimeoutMs = 3000;
     private const int LaunchTimeoutMs = 10000;
-    private const int HumanStepPauseMs = 500;
-    private const int VisualPickerPauseMs = 2000;
+    private const int HumanStepPauseMs = 200;
+    private const int VisualPickerPauseMs = 500;
     private static int _passed;
     private static int _failed;
 
