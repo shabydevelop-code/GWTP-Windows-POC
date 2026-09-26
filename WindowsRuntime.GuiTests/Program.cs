@@ -251,15 +251,17 @@ internal static class Program
                 // the GUI suite. Fixed coordinates are invalid on scaled/multi-monitor
                 // desktops because UIA bounds and physical cursor coordinates can differ.
                 ArrangeWindowsForPicker(runtimeWindow, hostWindow);
-                WaitUntil(() =>
-                {
-                    var rect = hostWindow.Current.BoundingRectangle;
-                    var work = Forms.Screen.PrimaryScreen.WorkingArea;
-                    return rect.Left >= work.Left && rect.Top >= work.Top &&
-                           rect.Right <= work.Right && rect.Bottom <= work.Bottom;
-                }, "Authored host did not reach a visible picker position.");
 
                 var authored = FindAllByAutomationId(hostWindow, "SharedContinue")[0];
+                WaitUntil(() =>
+                {
+                    var rect = authored.Current.BoundingRectangle;
+                    if (rect.IsEmpty || rect.Width <= 0 || rect.Height <= 0) return false;
+                    var center = new System.Drawing.Point(
+                        (int)Math.Round(rect.Left + rect.Width / 2),
+                        (int)Math.Round(rect.Top + rect.Height / 2));
+                    return Forms.Screen.AllScreens.Any(screen => screen.WorkingArea.Contains(center));
+                }, "Authored target did not reach a physically accessible picker position.");
                 SelectThroughRealPicker(runtimeWindow, authored);
                 ShowWindow(secondHwnd, SwRestore);
                 Invoke(FindByAutomationId(runtimeWindow, "FindElementButton"));
