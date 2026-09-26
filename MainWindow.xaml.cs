@@ -258,6 +258,19 @@ public partial class MainWindow : Window
 
         DiagnosticLog.Write("PendingTarget.Resolved");
         StopPendingTargetWait();
+
+        // A pending target may resolve after the UIA event was queued, while the
+        // editor/test harness has already authored or activated another step.
+        // Revalidate that the identity which triggered this callback is still the
+        // active identity before it is allowed to replace the current tracker.
+        if (_currentTestStepIndex < 0 ||
+            _currentTestStepIndex >= _testSteps.Count ||
+            !Equals(_selectedIdentity, _testSteps[_currentTestStepIndex]))
+        {
+            DiagnosticLog.Write("PendingTarget.StaleResolutionIgnored");
+            return;
+        }
+
         ShowElement(element);
         StartElementTracking(element);
         UpdateGuidanceNavigationState();
